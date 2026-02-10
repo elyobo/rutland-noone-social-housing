@@ -241,8 +241,8 @@ def main():
       const {{ Map3DElement, Polygon3DElement, AltitudeMode, MapMode }} = await google.maps.importLibrary("maps3d");
 
       const map = new Map3DElement({{
-        center: {{ lat: {ANCHOR_LAT - 0.0015}, lng: {ANCHOR_LON}, altitude: 200 }},
-        range: 400, tilt: 60, heading: 0, mode: MapMode.HYBRID
+        center: {{ lat: {ANCHOR_LAT - 0.001}, lng: {ANCHOR_LON - 0.0002}, altitude: 120 }},
+        range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
       }});
       map.style.width = map.style.height = "100%";
       document.getElementById("map").appendChild(map);

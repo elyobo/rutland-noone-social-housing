@@ -47,9 +47,9 @@ Three overruns above the main tower roof (RL 48.23):
 - **North stairwell**: RL 49.23, from 44.32m to 50.33m from south boundary
 
 ## Files
-- `generate_geojson.py` - Python script to generate building model
-- `index.geojson` - Output GeoJSON for shademap.app
-- `index.html` - Interactive 3D viewer using Google Maps API (API key inlined at build)
+- `generate_geojson.py` - Python script to generate building model (generates both output files)
+- `index.geojson` - Output GeoJSON for shademap.app (generated, do not edit directly)
+- `index.html` - Interactive 3D viewer using Google Maps API (generated, do not edit directly)
 
 ## Dependencies
 - Python >=3.12
