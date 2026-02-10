@@ -16,36 +16,55 @@ from shapely.ops import transform
 
 # === Configuration ===
 
-# Anchor point: NE corner of building (at street boundary)
-ANCHOR_LAT = -37.79402072126052
-ANCHOR_LON = 144.9959728611442
+# Anchor point: NE corner of EXISTING building (intersection of "line of existing building" lines)
+# This is 2.55m west of east lot boundary, 1.4m south of north lot boundary
+ANCHOR_LAT = -37.794009
+ANCHOR_LON = 144.995949
 
 # Building rotation: Rutland St runs ~6° west of true north
 # For building on WEST side of street, eastern face must align with street
 # Clockwise = negative angle in shapely
 ROTATION_DEG = -5.8
 
+# Position corrections relative to anchor
+# The anchor is at the existing building corner, not the lot corner:
+# - 1.4m south of north lot boundary
+# - 2.55m west of east lot boundary
+# Setbacks in planning docs are from lot boundaries; subtract these to get offsets from anchor
+NORTH_CORRECTION = 1.4   # meters; anchor is 1.4m south of north lot boundary
+EAST_CORRECTION = 2.55   # meters; anchor is 2.55m west of east lot boundary
+WEST_CORRECTION = 0.0    # meters; additional west shift if needed (rotation swing compensation)
+
 # Site dimensions (from planning documents)
 LOT_LENGTH = 80.9   # N-S dimension
 LOT_WIDTH = 40.5    # E-W dimension
 
-# Podium setbacks
-PODIUM_NORTH_SETBACK = 2.25
-PODIUM_EAST_SETBACK = 4.765
+# Podium setbacks (from lot boundaries, before correction)
+PODIUM_NORTH_SETBACK_RAW = 2.25
+PODIUM_EAST_SETBACK_RAW = 4.765
 PODIUM_WEST_SETBACK = 9.578
-PODIUM_SOUTH_EDGE = 14.725  # Distance from north boundary to podium's south edge
+PODIUM_SOUTH_EDGE_RAW = 14.725  # Distance from north lot boundary to podium's south edge
 
-# Tower setbacks
+# Apply corrections to get offsets from anchor
+PODIUM_NORTH_SETBACK = PODIUM_NORTH_SETBACK_RAW - NORTH_CORRECTION  # 0.85m
+PODIUM_SOUTH_EDGE = PODIUM_SOUTH_EDGE_RAW - NORTH_CORRECTION  # 13.325m
+PODIUM_EAST_SETBACK = PODIUM_EAST_SETBACK_RAW - EAST_CORRECTION  # 2.215m
+
+# Tower setbacks (from lot boundaries)
 TOWER_SOUTH_SETBACK = 0.492
-TOWER_EAST_SETBACK = 10.548
+TOWER_EAST_SETBACK_RAW = 10.548
+TOWER_EAST_SETBACK = TOWER_EAST_SETBACK_RAW - EAST_CORRECTION  # 7.998m
 TOWER_WEST_SETBACK = 8.086
 
-# Calculated building dimensions
-MASS1_WIDTH = LOT_WIDTH - PODIUM_EAST_SETBACK - PODIUM_WEST_SETBACK   # 26.157m
-MASS1_LENGTH = PODIUM_SOUTH_EDGE - PODIUM_NORTH_SETBACK               # 12.475m
+# Calculated building dimensions (use RAW setbacks from lot boundaries for widths)
+MASS1_WIDTH = LOT_WIDTH - PODIUM_EAST_SETBACK_RAW - PODIUM_WEST_SETBACK   # 26.157m
+MASS1_LENGTH = PODIUM_SOUTH_EDGE - PODIUM_NORTH_SETBACK                   # 12.475m
 
-MASS2_WIDTH = LOT_WIDTH - TOWER_EAST_SETBACK - TOWER_WEST_SETBACK     # 21.866m
-MASS2_LENGTH = LOT_LENGTH - PODIUM_SOUTH_EDGE - TOWER_SOUTH_SETBACK   # 65.683m
+MASS2_WIDTH = LOT_WIDTH - TOWER_EAST_SETBACK_RAW - TOWER_WEST_SETBACK     # 21.866m
+# Tower extends from podium south edge to near south lot boundary
+# South lot boundary is at (LOT_LENGTH - NORTH_CORRECTION) from anchor
+LOT_SOUTH_FROM_ANCHOR = LOT_LENGTH - NORTH_CORRECTION  # 79.5m
+MASS2_LENGTH = LOT_SOUTH_FROM_ANCHOR - PODIUM_SOUTH_EDGE - TOWER_SOUTH_SETBACK   # 65.683m
 
 # Heights
 MASS1_HEIGHT = 14.3
@@ -58,14 +77,14 @@ ROOF_SOUTH_HEIGHT = 28.65  # RL 50.38 - 21.73
 # From 31.59m to (31.59 - 3.67) = 27.92m from south boundary
 ROOF_STAIR_SOUTH_LENGTH = 3.67
 ROOF_STAIR_SOUTH_WIDTH = 5.59
-ROOF_STAIR_SOUTH_START_FROM_NORTH = LOT_LENGTH - 31.59  # 49.31m from north
+ROOF_STAIR_SOUTH_START_FROM_NORTH = (LOT_LENGTH - 31.59) - NORTH_CORRECTION  # 47.91m from anchor
 ROOF_STAIR_SOUTH_EAST_SETBACK = TOWER_EAST_SETBACK + 1.405  # 11.953m from east boundary
 
 # HW Heat Pump: SW corner aligned with original position
 # From 22.1m to (22.1 + 5.16) = 27.26m from south boundary
 ROOF_HW_LENGTH = 5.16
 ROOF_HW_WIDTH = 7.66
-ROOF_HW_START_FROM_NORTH = LOT_LENGTH - (22.1 + ROOF_HW_LENGTH)  # 53.64m from north
+ROOF_HW_START_FROM_NORTH = (LOT_LENGTH - (22.1 + ROOF_HW_LENGTH)) - NORTH_CORRECTION  # 52.24m from anchor
 ROOF_HW_WEST_FROM_BOUNDARY = 15.54
 ROOF_HW_EAST_SETBACK = LOT_WIDTH - ROOF_HW_WEST_FROM_BOUNDARY - ROOF_HW_WIDTH  # 17.3m from east
 
@@ -74,23 +93,24 @@ ROOF_NORTH_HEIGHT = 27.5  # RL 49.23 - 21.73
 ROOF_NORTH_START_FROM_SOUTH = 44.32
 ROOF_NORTH_END_FROM_SOUTH = 50.33
 ROOF_NORTH_LENGTH = ROOF_NORTH_END_FROM_SOUTH - ROOF_NORTH_START_FROM_SOUTH  # 6.01m
-ROOF_NORTH_START_FROM_NORTH = LOT_LENGTH - ROOF_NORTH_END_FROM_SOUTH  # 30.57m
+ROOF_NORTH_START_FROM_NORTH = (LOT_LENGTH - ROOF_NORTH_END_FROM_SOUTH) - NORTH_CORRECTION  # 29.17m from anchor
 ROOF_NORTH_EAST_SETBACK = TOWER_EAST_SETBACK + 0.86   # 0.86m back from tower's east edge
 ROOF_NORTH_WIDTH = 5.0  # Approximately 5m wide
 
 # Street-facing masses (at property boundary, in front of tower)
-# Transition point: 62.22% of 80.9m from south = 50.34m from south = 30.56m from north
-STREET_TRANSITION_FROM_NORTH = 30.56
+# Transition point: 62.22% of 80.9m from south = 50.34m from south = 30.56m from north lot boundary
+STREET_TRANSITION_FROM_NORTH_RAW = 30.56
+STREET_TRANSITION_FROM_NORTH = STREET_TRANSITION_FROM_NORTH_RAW - NORTH_CORRECTION
 
 # Northern street-facing mass (taller, adjacent to podium)
 STREET_NORTH_LENGTH = STREET_TRANSITION_FROM_NORTH - PODIUM_SOUTH_EDGE  # 15.835m
 STREET_NORTH_HEIGHT = 9.6
-STREET_NORTH_WIDTH = TOWER_EAST_SETBACK  # 10.548m (fills gap to tower)
+STREET_NORTH_WIDTH = TOWER_EAST_SETBACK  # fills gap from anchor to tower (7.998m)
 
 # Southern street-facing mass (lower)
-STREET_SOUTH_LENGTH = (LOT_LENGTH - TOWER_SOUTH_SETBACK) - STREET_TRANSITION_FROM_NORTH  # 49.848m
+STREET_SOUTH_LENGTH = (LOT_SOUTH_FROM_ANCHOR - TOWER_SOUTH_SETBACK) - STREET_TRANSITION_FROM_NORTH  # 49.848m
 STREET_SOUTH_HEIGHT = 6.45
-STREET_SOUTH_WIDTH = TOWER_EAST_SETBACK  # 10.548m
+STREET_SOUTH_WIDTH = TOWER_EAST_SETBACK  # fills gap from anchor to tower (7.998m)
 
 # Output files
 OUTPUT_FILE = "index.geojson"
@@ -117,15 +137,16 @@ def create_building_mass(anchor_x: float, anchor_y: float,
     """
     Create a rectangular building mass in UTM coordinates.
 
-    Anchor is at NE corner of lot (street boundary). Building extends:
-    - West (negative X) by width, starting from east_setback
+    Anchor is at NE corner of existing building (intersection of property east boundary
+    and existing building north edge). Building extends:
+    - West (negative X) by width, starting from east_setback + WEST_CORRECTION
     - South (negative Y) by length
 
     offset_along: distance south from anchor to start this mass
     east_setback: distance west from anchor to start eastern face
     """
-    # NE corner of building (set back from lot boundary)
-    ne_x = anchor_x - east_setback
+    # NE corner of building (set back from anchor, with west correction)
+    ne_x = anchor_x - east_setback - WEST_CORRECTION
     ne_y = anchor_y - offset_along
 
     nw_x = ne_x - width
@@ -337,7 +358,7 @@ def main():
     <h3>Noone Street and Rutland Street Community Housing</h3>
     <p>Tower: {MASS2_HEIGHT}m &bull; Roof peaks: {ROOF_SOUTH_HEIGHT}m / {ROOF_NORTH_HEIGHT}m<br>
     Podium: {MASS1_HEIGHT}m &bull; Street: {STREET_NORTH_HEIGHT}m / {STREET_SOUTH_HEIGHT}m</p>
-    <p>Load <a href="index.geojson">building model</a> into <a href="https://shademap.app" target="_blank">shademap.app</a> to see shade impact at different times of day/year.</p>
+    <p>Load <a href="index.geojson" download="index.geojson">building model</a> into <a href="https://shademap.app" target="_blank">shademap.app</a> to see shade impact at different times of day/year.</p>
     <p class="note">Use shift+drag or control+drag (depends on browser/os) to change viewing angles.</p>
   </div>
 
