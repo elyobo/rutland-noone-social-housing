@@ -47,9 +47,35 @@ STREET_NORTH_EAST_SETBACK = 4.76
 STREET_SOUTH_EAST_SETBACK = 2.55
 STREET_TRANSITION = 30.56  # N-S position where 9.6m transitions to 6.45m
 
+# Stairwell shafts (cut notches into main tower east face)
+SHAFT_EAST_SETBACK = 12.953  # From lot east boundary (same for both)
+
+# North shaft (matches roof north stairwell)
+NORTH_SHAFT_WIDTH = 5.0    # E-W
+NORTH_SHAFT_LENGTH = 6.01  # N-S
+NORTH_SHAFT_SOUTH_OFFSET = 29.17 + ANCHOR_SOUTH_OF_LOT_NORTH  # From lot north
+
+# South shaft (matches roof south stairwell)
+SOUTH_SHAFT_WIDTH = 5.59   # E-W
+SOUTH_SHAFT_LENGTH = 3.67  # N-S
+SOUTH_SHAFT_SOUTH_OFFSET = 47.91 + ANCHOR_SOUTH_OF_LOT_NORTH  # From lot north
+
+# West notch (light well, aligned with north shaft)
+WEST_NOTCH_LENGTH = TOWER_NORTH_SETBACK - PODIUM_SOUTH_SETBACK  # N-S extent = gap between podium and tower
+WEST_NOTCH_EAST_SETBACK = 22.308  # Back of notch from lot east (aligns with lift shaft west edge)
+
+# South notch (corridor light well, centered in tower)
+SOUTH_NOTCH_WIDTH = 1.6  # E-W extent
+SOUTH_NOTCH_NORTH_SETBACK = 5.09  # Back of notch from lot south boundary
+
 CARPARK_WEST_SETBACK = 4.384
 CARPARK_NORTH_SETBACK = 14.58
 CARPARK_SOUTH_SETBACK = 9.035
+
+# Fence dimensions
+FENCE_HEIGHT = 1.0  # 1m decorative fence
+BRICK_WIDTH = 0.1   # 10cm brick pillars
+PICKET_THICKNESS = 0.05  # Minimum for GeoJSON visibility
 
 # Computed dimensions
 TOWER_WIDTH = LOT_WIDTH - TOWER_EAST_SETBACK - TOWER_WEST_SETBACK
@@ -96,6 +122,13 @@ def box(east_setback, south_offset, width, length):
     ])
 
 
+def polygon(vertices):
+    """Create polygon in UTM from list of (east_setback, south_offset) tuples relative to anchor."""
+    coords = [(ANCHOR_X - e, ANCHOR_Y - s) for e, s in vertices]
+    coords.append(coords[0])  # Close the polygon
+    return Polygon(coords)
+
+
 # Building definitions: (name, east_setback, south_offset, width, length, height, color_group)
 # east_setback and south_offset are relative to anchor point
 BUILDINGS = [
@@ -107,14 +140,10 @@ BUILDINGS = [
         STAIR_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         PODIUM_SOUTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
         STAIR_WIDTH, STAIR_LENGTH, TOWER_HEIGHT, "roof"),
-    ("Main tower",
-        TOWER_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
-        TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        TOWER_WIDTH, TOWER_LENGTH, TOWER_HEIGHT, "tower"),
     ("Street-facing north",
         STREET_NORTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        STREET_NORTH_WIDTH, STREET_NORTH_LENGTH, 9.6, "street"),
+        STREET_NORTH_WIDTH, STREET_NORTH_LENGTH, 9.675, "street"),
     ("Street-facing south",
         STREET_SOUTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         STREET_TRANSITION - ANCHOR_SOUTH_OF_LOT_NORTH,
@@ -128,6 +157,58 @@ BUILDINGS = [
         CARPARK_WIDTH, CARPARK_LENGTH, 0.11, "carpark"),
 ]
 
+# Main tower with notches - defined by vertices (east_setback, south_offset) from anchor
+# Vertices clockwise from NE corner
+_tower_ne_east = TOWER_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST
+_tower_ne_south = TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH
+_tower_west = _tower_ne_east + TOWER_WIDTH
+
+# East face shaft notches
+_shaft_east = SHAFT_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST
+_north_shaft_north = NORTH_SHAFT_SOUTH_OFFSET - ANCHOR_SOUTH_OF_LOT_NORTH
+_north_shaft_south = _north_shaft_north + NORTH_SHAFT_LENGTH
+_south_shaft_north = SOUTH_SHAFT_SOUTH_OFFSET - ANCHOR_SOUTH_OF_LOT_NORTH
+_south_shaft_south = _south_shaft_north + SOUTH_SHAFT_LENGTH
+
+# West face light well notch
+_west_notch_back = WEST_NOTCH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST
+_west_notch_south = _north_shaft_south  # Aligns with north shaft's south edge
+_west_notch_north = _west_notch_south - WEST_NOTCH_LENGTH
+
+# South face corridor notch (centered E-W)
+_south_notch_east = _tower_ne_east + (TOWER_WIDTH - SOUTH_NOTCH_WIDTH) / 2
+_south_notch_west = _south_notch_east + SOUTH_NOTCH_WIDTH
+_south_notch_south = _tower_ne_south + TOWER_LENGTH  # At tower south edge
+_south_notch_north = LOT_LENGTH - SOUTH_NOTCH_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH
+
+MAIN_TOWER = {
+    "name": "Main tower",
+    "vertices": [
+        (_tower_ne_east, _tower_ne_south),                               # NE corner
+        (_tower_ne_east, _north_shaft_north),                            # East face to north shaft
+        (_shaft_east, _north_shaft_north),                               # Into north shaft (west)
+        (_shaft_east, _north_shaft_south),                               # Down north shaft back
+        (_tower_ne_east, _north_shaft_south),                            # Out of north shaft (east)
+        (_tower_ne_east, _south_shaft_north),                            # East face to south shaft
+        (_shaft_east, _south_shaft_north),                               # Into south shaft (west)
+        (_shaft_east, _south_shaft_south),                               # Down south shaft back
+        (_tower_ne_east, _south_shaft_south),                            # Out of south shaft (east)
+        (_tower_ne_east, _south_notch_south),                            # SE corner
+        (_south_notch_east, _south_notch_south),                         # South face to notch
+        (_south_notch_east, _south_notch_north),                         # Into south notch (north)
+        (_south_notch_west, _south_notch_north),                         # Across south notch back
+        (_south_notch_west, _south_notch_south),                         # Out of south notch (south)
+        (_tower_west, _south_notch_south),                               # SW corner
+        (_tower_west, _west_notch_south),                                # West face to notch
+        (_west_notch_back, _west_notch_south),                           # Into west notch (east)
+        (_west_notch_back, _west_notch_north),                           # Up west notch back
+        (_tower_west, _west_notch_north),                                # Out of west notch (west)
+        (_tower_west, _tower_ne_south),                                  # NW corner
+    ],
+    "height": TOWER_HEIGHT,
+    "color_group": "tower",
+}
+
 # Lot boundary frame (computed from constants, 0.3m thick edges)
 FRAME_THICK = 0.3
 LOT_BOUNDARY = [
@@ -137,14 +218,58 @@ LOT_BOUNDARY = [
     ("Lot boundary W", LOT_NE_EAST_SETBACK + LOT_WIDTH - FRAME_THICK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot"),
 ]
 
+# North fence (extends north from podium toward lot north boundary)
+# Runs N-S from podium north edge to 0.5m inside lot north boundary
+# E-W extent matches podium exactly
+_nfence_south = PODIUM_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH  # 0.85m (podium north)
+_nfence_north = LOT_NE_SOUTH_OFFSET + 0.5  # -0.9m (0.5m from lot north)
+_nfence_span = _nfence_south - _nfence_north  # 1.75m N-S
+_nfence_east = PODIUM_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST  # 2.215 (podium east edge)
+_nfence_width = PODIUM_WIDTH  # 26.107m (same as podium)
+
+NORTH_FENCE = [
+    # South brick: at podium, extends north, full E-W width
+    ("North fence brick S", _nfence_east, _nfence_south - BRICK_WIDTH,
+     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+    # North brick: near lot boundary, full E-W width
+    ("North fence brick N", _nfence_east, _nfence_north,
+     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+    # Picket fence between brick sections, full E-W width
+    ("North fence picket", _nfence_east, _nfence_north + BRICK_WIDTH,
+     _nfence_width, _nfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence"),
+]
+
+# Street fence (east of street-facing south, from building edge toward lot boundary)
+# Runs N-S from north shaft south edge to building south edge
+# E-W from building edge to 0.5m inside lot boundary
+_sfence_north = NORTH_SHAFT_SOUTH_OFFSET + NORTH_SHAFT_LENGTH - ANCHOR_SOUTH_OF_LOT_NORTH  # 35.18m
+_sfence_south = LOT_LENGTH - TOWER_SOUTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH  # 79.008m
+_sfence_span = _sfence_south - _sfence_north  # ~43.83m
+_sfence_east = LOT_NE_EAST_SETBACK + 0.5  # -2.05 (0.5m from lot boundary)
+_sfence_west = STREET_SOUTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST  # 0 (building edge)
+_sfence_width = _sfence_west - _sfence_east  # 2.05m
+
+STREET_FENCE = [
+    # North brick: at north end, full E-W width
+    ("Street fence brick N", _sfence_east, _sfence_north,
+     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+    # South brick: at south end, full E-W width
+    ("Street fence brick S", _sfence_east, _sfence_south - BRICK_WIDTH,
+     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+    # Picket fence between brick sections, full E-W width
+    ("Street fence picket", _sfence_east, _sfence_north + BRICK_WIDTH,
+     _sfence_width, _sfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence"),
+]
+
 # Brick colours from architectural drawings
 COLORS = {
     "tower":   ("rgba(176, 128, 112, 1.0)", "rgba(140, 100, 88, 1.0)"),   # Lighter pinkish-red brick
     "podium":  ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
     "street":  ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
     "roof":    ("rgba(128, 128, 128, 1.0)", "rgba(96, 96, 96, 1.0)"),     # Grey
-    "carpark": ("rgba(80, 80, 80, 0.6)",    "rgba(60, 60, 60, 1.0)"),     # Dark grey, semi-transparent
+    "carpark": ("rgba(80, 80, 80, 1.0)",    "rgba(60, 60, 60, 1.0)"),     # Dark grey
     "lot":     ("rgba(0, 120, 255, 1.0)",   "rgba(0, 80, 200, 1.0)"),     # Bright blue
+    "fence":   ("rgba(0, 0, 0, 0.7)",       "rgba(0, 0, 0, 0.9)"),        # Black picket fence
 }
 
 
@@ -156,15 +281,8 @@ def main():
     features = []
     js_buildings = []
 
-    for name, east, south, width, length, height, color_group in BUILDINGS + LOT_BOUNDARY:
-        # Apply adjustments (not to lot boundary or podium)
-        if color_group not in ("lot",) and name != "Northern podium":
-            east += WEST_SHIFT
-        if height > PODIUM_HEIGHT:  # Taller than podium = part of main tower mass
-            height -= MAIN_HEIGHT_REDUCTION
-
-        # Create box in UTM, rotate, convert to WGS84
-        poly = box(east, south, width, length)
+    def add_building(poly, name, height, color_group):
+        """Process a building polygon and add to output lists."""
         rotated = rotate(poly, ROTATION_DEG, origin=(ANCHOR_X, ANCHOR_Y))
         wgs84 = transform(_to_wgs84, rotated)
 
@@ -181,6 +299,25 @@ def main():
             "fill": fill,
             "stroke": stroke,
         })
+
+    # Process simple box buildings
+    for name, east, south, width, length, height, color_group in BUILDINGS + LOT_BOUNDARY + NORTH_FENCE + STREET_FENCE:
+        # Apply adjustments (not to lot boundary, podium, or fences)
+        if color_group not in ("lot", "fence") and name != "Northern podium" and "fence" not in name.lower():
+            east += WEST_SHIFT
+        if height > PODIUM_HEIGHT:  # Taller than podium = part of main tower mass
+            height -= MAIN_HEIGHT_REDUCTION
+
+        poly = box(east, south, width, length)
+        add_building(poly, name, height, color_group)
+
+    # Process main tower (complex polygon with shaft notch)
+    height = MAIN_TOWER["height"] - MAIN_HEIGHT_REDUCTION
+    vertices = [
+        (e + WEST_SHIFT, s) for e, s in MAIN_TOWER["vertices"]
+    ]
+    poly = polygon(vertices)
+    add_building(poly, MAIN_TOWER["name"], height, MAIN_TOWER["color_group"])
 
     # Write GeoJSON
     geojson = {"type": "FeatureCollection", "features": features}
@@ -225,7 +362,7 @@ def main():
        <a href="https://shademap.app" target="_blank">shademap.app</a> for shade analysis.</p>
     <div class="legend">
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(176,128,112)"></span>Main tower (26.5m)</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:rgb(140,68,68)"></span>Podium (14.3m) / Street (9.6m, 6.45m)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:rgb(140,68,68)"></span>Podium (14.3m) / Street (9.675m, 6.45m)</div>
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(128,128,128)"></span>Roof plant &amp; stairs</div>
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(80,80,80)"></span>Car park (external overflow)</div>
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(0,120,255)"></span>Lot boundary</div>
