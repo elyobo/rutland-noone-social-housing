@@ -22,7 +22,10 @@
     }
     #info h3 { margin: 0 0 8px 0; font-size: 15px; }
     #info p { margin: 0 0 8px 0; color: #666; font-size: 12px; line-height: 1.4; }
+    #info a { color: #1a73e8; }
     .note { font-size: 11px; color: #888; margin-top: 8px; }
+    /* Hide Google Maps alpha channel warning */
+    .dismissButton, .scene-footer { display: none !important; }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I&v=alpha&libraries=maps3d" async></script>
 </head>
@@ -32,7 +35,8 @@
     <h3>23 Rutland St, Clifton Hill</h3>
     <p>Tower: 26.5m &bull; Roof peaks: 28.65m / 27.5m<br>
     Podium: 14.3m &bull; Street: 9.6m / 6.45m</p>
-    <p class="note">Click and drag to pan, scroll to zoom, right-click drag to rotate</p>
+    <p>Load <a href="index.geojson">building model</a> into <a href="https://shademap.app" target="_blank">shademap.app</a> to see shade impact at different times of day/year.</p>
+    <p class="note">Drag to orbit, scroll to zoom, shift+drag to pan</p>
   </div>
 
   <script>
