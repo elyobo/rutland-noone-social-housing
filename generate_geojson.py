@@ -129,32 +129,33 @@ def polygon(vertices):
     return Polygon(coords)
 
 
-# Building definitions: (name, east_setback, south_offset, width, length, height, color_group)
+# Building definitions: (name, east_setback, south_offset, width, length, height, color_group, shade_relevant)
 # east_setback and south_offset are relative to anchor point
+# shade_relevant: whether to include in GeoJSON for shade mapping (all included in HTML viewer)
 BUILDINGS = [
     ("Northern podium",
         PODIUM_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         PODIUM_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        PODIUM_WIDTH, PODIUM_LENGTH, PODIUM_HEIGHT, "podium"),
+        PODIUM_WIDTH, PODIUM_LENGTH, PODIUM_HEIGHT, "podium", True),
     ("Stair core north",
         STAIR_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         PODIUM_SOUTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        STAIR_WIDTH, STAIR_LENGTH, TOWER_HEIGHT, "roof"),
+        STAIR_WIDTH, STAIR_LENGTH, TOWER_HEIGHT, "roof", True),
     ("Street-facing north",
         STREET_NORTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        STREET_NORTH_WIDTH, STREET_NORTH_LENGTH, 9.675, "street"),
+        STREET_NORTH_WIDTH, STREET_NORTH_LENGTH, 9.675, "street", True),
     ("Street-facing south",
         STREET_SOUTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         STREET_TRANSITION - ANCHOR_SOUTH_OF_LOT_NORTH,
-        STREET_SOUTH_WIDTH, STREET_SOUTH_LENGTH, 6.45, "street"),
-    ("Roof south stairwell",      9.403, 47.91,   5.59,    3.67,  28.65, "roof"),
-    ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.4, "roof"),
-    ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof"),
+        STREET_SOUTH_WIDTH, STREET_SOUTH_LENGTH, 6.45, "street", True),
+    ("Roof south stairwell",      9.403, 47.91,   5.59,    3.67,  28.65, "roof", True),
+    ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.4, "roof", True),
+    ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof", True),
     ("Car park west",
         LOT_WIDTH - TOWER_WEST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         CARPARK_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        CARPARK_WIDTH, CARPARK_LENGTH, 0.11, "carpark"),
+        CARPARK_WIDTH, CARPARK_LENGTH, 0.11, "carpark", False),
 ]
 
 # Main tower with notches - defined by vertices (east_setback, south_offset) from anchor
@@ -212,10 +213,10 @@ MAIN_TOWER = {
 # Lot boundary frame (computed from constants, 0.3m thick edges)
 FRAME_THICK = 0.3
 LOT_BOUNDARY = [
-    ("Lot boundary N", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET, LOT_WIDTH, FRAME_THICK, 0.1, "lot"),
-    ("Lot boundary S", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + LOT_LENGTH - FRAME_THICK, LOT_WIDTH, FRAME_THICK, 0.1, "lot"),
-    ("Lot boundary E", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot"),
-    ("Lot boundary W", LOT_NE_EAST_SETBACK + LOT_WIDTH - FRAME_THICK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot"),
+    ("Lot boundary N", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET, LOT_WIDTH, FRAME_THICK, 0.1, "lot", False),
+    ("Lot boundary S", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + LOT_LENGTH - FRAME_THICK, LOT_WIDTH, FRAME_THICK, 0.1, "lot", False),
+    ("Lot boundary E", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot", False),
+    ("Lot boundary W", LOT_NE_EAST_SETBACK + LOT_WIDTH - FRAME_THICK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot", False),
 ]
 
 # North fence (extends north from podium toward lot north boundary)
@@ -230,13 +231,13 @@ _nfence_width = PODIUM_WIDTH  # 26.107m (same as podium)
 NORTH_FENCE = [
     # South brick: at podium, extends north, full E-W width
     ("North fence brick S", _nfence_east, _nfence_south - BRICK_WIDTH,
-     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
     # North brick: near lot boundary, full E-W width
     ("North fence brick N", _nfence_east, _nfence_north,
-     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
     # Picket fence between brick sections, full E-W width
     ("North fence picket", _nfence_east, _nfence_north + BRICK_WIDTH,
-     _nfence_width, _nfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence"),
+     _nfence_width, _nfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence", False),
 ]
 
 # Street fence (east of street-facing south, from building edge toward lot boundary)
@@ -252,13 +253,13 @@ _sfence_width = _sfence_west - _sfence_east  # 2.05m
 STREET_FENCE = [
     # North brick: at north end, full E-W width
     ("Street fence brick N", _sfence_east, _sfence_north,
-     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
     # South brick: at south end, full E-W width
     ("Street fence brick S", _sfence_east, _sfence_south - BRICK_WIDTH,
-     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium"),
+     _sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
     # Picket fence between brick sections, full E-W width
     ("Street fence picket", _sfence_east, _sfence_north + BRICK_WIDTH,
-     _sfence_width, _sfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence"),
+     _sfence_width, _sfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence", False),
 ]
 
 # Brick colours from architectural drawings
@@ -281,16 +282,17 @@ def main():
     features = []
     js_buildings = []
 
-    def add_building(poly, name, height, color_group):
+    def add_building(poly, name, height, color_group, shade_relevant):
         """Process a building polygon and add to output lists."""
         rotated = rotate(poly, ROTATION_DEG, origin=(ANCHOR_X, ANCHOR_Y))
         wgs84 = transform(_to_wgs84, rotated)
 
-        features.append({
-            "type": "Feature",
-            "properties": {"name": name, "height": height},
-            "geometry": mapping(wgs84),
-        })
+        if shade_relevant:
+            features.append({
+                "type": "Feature",
+                "properties": {"name": name, "height": height},
+                "geometry": mapping(wgs84),
+            })
 
         fill, stroke = COLORS[color_group]
         js_buildings.append({
@@ -301,7 +303,7 @@ def main():
         })
 
     # Process simple box buildings
-    for name, east, south, width, length, height, color_group in BUILDINGS + LOT_BOUNDARY + NORTH_FENCE + STREET_FENCE:
+    for name, east, south, width, length, height, color_group, shade_relevant in BUILDINGS + LOT_BOUNDARY + NORTH_FENCE + STREET_FENCE:
         # Apply adjustments (not to lot boundary, podium, or fences)
         if color_group not in ("lot", "fence") and name != "Northern podium" and "fence" not in name.lower():
             east += WEST_SHIFT
@@ -309,7 +311,7 @@ def main():
             height -= MAIN_HEIGHT_REDUCTION
 
         poly = box(east, south, width, length)
-        add_building(poly, name, height, color_group)
+        add_building(poly, name, height, color_group, shade_relevant)
 
     # Process main tower (complex polygon with shaft notch)
     height = MAIN_TOWER["height"] - MAIN_HEIGHT_REDUCTION
@@ -317,7 +319,7 @@ def main():
         (e + WEST_SHIFT, s) for e, s in MAIN_TOWER["vertices"]
     ]
     poly = polygon(vertices)
-    add_building(poly, MAIN_TOWER["name"], height, MAIN_TOWER["color_group"])
+    add_building(poly, MAIN_TOWER["name"], height, MAIN_TOWER["color_group"], True)
 
     # Write GeoJSON
     geojson = {"type": "FeatureCollection", "features": features}
