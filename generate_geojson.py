@@ -211,6 +211,7 @@ def main():
     .legend {{ margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }}
     .legend-item {{ display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }}
     .legend-swatch {{ width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }}
+    .toggle {{ display: block; margin-top: 10px; font-size: 12px; cursor: pointer; }}
     /* Hide Google Maps alpha channel warning */
     [role="region"][aria-label*="alpha channel"] {{ display: none !important; }}
   </style>
@@ -230,6 +231,7 @@ def main():
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(0,120,255)"></span>Lot boundary</div>
     </div>
     <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
+    <label class="toggle"><input type="checkbox" id="occluded"> Show through existing buildings</label>
   </div>
   <script>
     const GROUND = {GROUND_RL};
@@ -245,6 +247,7 @@ def main():
       map.style.width = map.style.height = "100%";
       document.getElementById("map").appendChild(map);
 
+      const polygons = [];
       for (const b of BUILDINGS) {{
         const poly = new Polygon3DElement({{
           altitudeMode: AltitudeMode.ABSOLUTE,
@@ -252,13 +255,18 @@ def main():
           fillColor: b.fill,
           strokeColor: b.stroke,
           strokeWidth: 2,
-          drawsOccludedSegments: true
+          drawsOccludedSegments: false
         }});
         poly.outerCoordinates = b.coords.map(([lng, lat]) => ({{
           lat, lng, altitude: GROUND + b.height
         }}));
         map.appendChild(poly);
+        polygons.push(poly);
       }}
+
+      document.getElementById("occluded").addEventListener("change", (e) => {{
+        for (const p of polygons) p.drawsOccludedSegments = e.target.checked;
+      }});
     }}
 
     window.onload = init;
