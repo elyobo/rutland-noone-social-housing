@@ -25,7 +25,7 @@
     #info a { color: #1a73e8; }
     .note { font-size: 11px; color: #888; margin-top: 8px; }
     /* Hide Google Maps alpha channel warning */
-    .dismissButton, .scene-footer { display: none !important; }
+    [role="region"][aria-label*="alpha channel"] { display: none !important; }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I&v=alpha&libraries=maps3d" async></script>
 </head>
@@ -66,7 +66,7 @@
         center: { lat: CENTER_LAT, lng: CENTER_LNG, altitude: 200 },
         range: 400,
         tilt: 60,
-        heading: 30,
+        heading: 0,
         mode: MapMode.HYBRID
       });
 
