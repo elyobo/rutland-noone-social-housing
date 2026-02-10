@@ -1,0 +1,37 @@
+[env]
+GOOGLE_MAPS_API_KEY = "AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I"
+_.file = ".env"
+_.python.venv = { path = ".venv" }
+
+[tools]
+uv = "latest"
+
+[tasks]
+uv-deps = "uv sync"
+build = "python generate_geojson.py"
+serve = "python -m http.server 8000"
+
+[tasks.deps]
+depends = ["uv-deps"]
+description = "Install all dependencies"
+alias = "d"
+
+[tasks.deploy]
+description = "Build and deploy to gh-pages"
+depends = ["uv-deps"]
+run = """
+python generate_geojson.py
+cp index.html /tmp/index.html.deploy
+cp index.geojson /tmp/index.geojson.deploy
+git stash --include-untracked
+git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+git rm -rf . 2>/dev/null || true
+cp /tmp/index.html.deploy index.html
+cp /tmp/index.geojson.deploy index.geojson
+git add index.html index.geojson
+git commit -m "Deploy" --allow-empty
+git push origin gh-pages --force
+git checkout main
+git stash pop 2>/dev/null || true
+rm -f /tmp/index.html.deploy /tmp/index.geojson.deploy
+"""
