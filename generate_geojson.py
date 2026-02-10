@@ -11,6 +11,7 @@ from shapely.ops import transform
 # Configuration: Adjustments for modelling alternatives
 MAIN_HEIGHT_REDUCTION = 0.0  # Metres to reduce main tower and roof items
 WEST_SHIFT = 0.0  # Metres to shift all except podium westward
+MIN_DIMENSION = 0.01  # Minimum dimension for non-shading elements (lot boundary, car park); note that google maps ignores these minimums and renders at some arbitrary minimum anyway.
 
 # Anchor: NE corner of existing building
 ANCHOR_LAT, ANCHOR_LON = -37.794009, 144.995949
@@ -75,7 +76,7 @@ CARPARK_SOUTH_SETBACK = 9.035
 # Fence dimensions
 FENCE_HEIGHT = 1.0  # 1m decorative fence
 BRICK_WIDTH = 0.1   # 10cm brick pillars
-PICKET_THICKNESS = 0.05  # Minimum for GeoJSON visibility
+PICKET_THICKNESS = MIN_DIMENSION  # Thin fence sections
 
 # Computed dimensions
 TOWER_WIDTH = LOT_WIDTH - TOWER_EAST_SETBACK - TOWER_WEST_SETBACK
@@ -155,7 +156,7 @@ BUILDINGS = [
     ("Car park west",
         LOT_WIDTH - TOWER_WEST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         CARPARK_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
-        CARPARK_WIDTH, CARPARK_LENGTH, 0.11, "carpark", False),
+        CARPARK_WIDTH, CARPARK_LENGTH, MIN_DIMENSION, "carpark", False),
 ]
 
 # Main tower with notches - defined by vertices (east_setback, south_offset) from anchor
@@ -210,13 +211,13 @@ MAIN_TOWER = {
     "color_group": "tower",
 }
 
-# Lot boundary frame (computed from constants, 0.3m thick edges)
-FRAME_THICK = 0.3
+# Lot boundary frame
+FRAME_THICK = MIN_DIMENSION
 LOT_BOUNDARY = [
-    ("Lot boundary N", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET, LOT_WIDTH, FRAME_THICK, 0.1, "lot", False),
-    ("Lot boundary S", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + LOT_LENGTH - FRAME_THICK, LOT_WIDTH, FRAME_THICK, 0.1, "lot", False),
-    ("Lot boundary E", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot", False),
-    ("Lot boundary W", LOT_NE_EAST_SETBACK + LOT_WIDTH - FRAME_THICK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, 0.1, "lot", False),
+    ("Lot boundary N", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET, LOT_WIDTH, FRAME_THICK, FRAME_THICK, "lot", False),
+    ("Lot boundary S", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + LOT_LENGTH - FRAME_THICK, LOT_WIDTH, FRAME_THICK, FRAME_THICK, "lot", False),
+    ("Lot boundary E", LOT_NE_EAST_SETBACK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, FRAME_THICK, "lot", False),
+    ("Lot boundary W", LOT_NE_EAST_SETBACK + LOT_WIDTH - FRAME_THICK, LOT_NE_SOUTH_OFFSET + FRAME_THICK, FRAME_THICK, LOT_LENGTH - 2 * FRAME_THICK, FRAME_THICK, "lot", False),
 ]
 
 # North fence (extends north from podium toward lot north boundary)
