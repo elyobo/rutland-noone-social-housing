@@ -50,8 +50,8 @@
       const { Map3DElement, Polygon3DElement, AltitudeMode, MapMode } = await google.maps.importLibrary("maps3d");
 
       const map = new Map3DElement({
-        center: { lat: -37.795509, lng: 144.995949, altitude: 200 },
-        range: 400, tilt: 60, heading: 0, mode: MapMode.HYBRID
+        center: { lat: -37.795009, lng: 144.995749, altitude: 120 },
+        range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
       });
       map.style.width = map.style.height = "100%";
       document.getElementById("map").appendChild(map);
