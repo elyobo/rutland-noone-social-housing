@@ -1,350 +1,124 @@
 #!/usr/bin/env python3
-"""
-Generate GeoJSON for Noone Street and Rutland Street Community Housing shade impact assessment.
-
-Creates building masses aligned with Rutland Street (~12° west of true north),
-using shapely for proper geometric transformations.
-"""
+"""Generate GeoJSON building model for Rutland St development shade assessment."""
 
 import json
 import os
+import pyproj
 from shapely.geometry import Polygon, mapping
 from shapely.affinity import rotate
-import pyproj
-from functools import partial
 from shapely.ops import transform
 
-# === Configuration ===
+# Configuration: Adjustments for modelling alternatives
+MAIN_HEIGHT_REDUCTION = 0.0  # Metres to reduce main tower and roof items
+WEST_SHIFT = 0.0  # Metres to shift all except podium westward
 
-# Anchor point: NE corner of EXISTING building (intersection of "line of existing building" lines)
-# This is 2.55m west of east lot boundary, 1.4m south of north lot boundary
-ANCHOR_LAT = -37.794009
-ANCHOR_LON = 144.995949
+# Anchor: NE corner of existing building
+ANCHOR_LAT, ANCHOR_LON = -37.794009, 144.995949
+ROTATION_DEG = -5.8  # Rutland St alignment (clockwise from north)
+GROUND_RL = 21.73
 
-# Building rotation: Rutland St runs ~6° west of true north
-# For building on WEST side of street, eastern face must align with street
-# Clockwise = negative angle in shapely
-ROTATION_DEG = -5.8
+# Coordinate transformers (WGS84 <-> UTM zone 55S for Melbourne)
+_wgs84 = pyproj.CRS("EPSG:4326")
+_utm = pyproj.CRS("EPSG:32755")
+_to_utm = pyproj.Transformer.from_crs(_wgs84, _utm, always_xy=True).transform
+_to_wgs84 = pyproj.Transformer.from_crs(_utm, _wgs84, always_xy=True).transform
 
-# Position corrections relative to anchor
-# The anchor is at the existing building corner, not the lot corner:
-# - 1.4m south of north lot boundary
-# - 2.55m west of east lot boundary
-# Setbacks in planning docs are from lot boundaries; subtract these to get offsets from anchor
-NORTH_CORRECTION = 1.4   # meters; anchor is 1.4m south of north lot boundary
-EAST_CORRECTION = 2.55   # meters; anchor is 2.55m west of east lot boundary
-WEST_CORRECTION = 0.0    # meters; additional west shift if needed (rotation swing compensation)
-
-# Site dimensions (from planning documents)
-LOT_LENGTH = 80.9   # N-S dimension
-LOT_WIDTH = 40.5    # E-W dimension
-
-# Podium setbacks (from lot boundaries, before correction)
-PODIUM_NORTH_SETBACK_RAW = 2.25
-PODIUM_EAST_SETBACK_RAW = 4.765
-PODIUM_WEST_SETBACK = 9.578
-PODIUM_SOUTH_EDGE_RAW = 14.725  # Distance from north lot boundary to podium's south edge
-
-# Apply corrections to get offsets from anchor
-PODIUM_NORTH_SETBACK = PODIUM_NORTH_SETBACK_RAW - NORTH_CORRECTION  # 0.85m
-PODIUM_SOUTH_EDGE = PODIUM_SOUTH_EDGE_RAW - NORTH_CORRECTION  # 13.325m
-PODIUM_EAST_SETBACK = PODIUM_EAST_SETBACK_RAW - EAST_CORRECTION  # 2.215m
-
-# Tower setbacks (from lot boundaries)
-TOWER_SOUTH_SETBACK = 0.492
-TOWER_EAST_SETBACK_RAW = 10.548
-TOWER_EAST_SETBACK = TOWER_EAST_SETBACK_RAW - EAST_CORRECTION  # 7.998m
-TOWER_WEST_SETBACK = 8.086
-
-# Calculated building dimensions (use RAW setbacks from lot boundaries for widths)
-MASS1_WIDTH = LOT_WIDTH - PODIUM_EAST_SETBACK_RAW - PODIUM_WEST_SETBACK   # 26.157m
-MASS1_LENGTH = PODIUM_SOUTH_EDGE - PODIUM_NORTH_SETBACK                   # 12.475m
-
-MASS2_WIDTH = LOT_WIDTH - TOWER_EAST_SETBACK_RAW - TOWER_WEST_SETBACK     # 21.866m
-# Tower extends from podium south edge to near south lot boundary
-# South lot boundary is at (LOT_LENGTH - NORTH_CORRECTION) from anchor
-LOT_SOUTH_FROM_ANCHOR = LOT_LENGTH - NORTH_CORRECTION  # 79.5m
-MASS2_LENGTH = LOT_SOUTH_FROM_ANCHOR - PODIUM_SOUTH_EDGE - TOWER_SOUTH_SETBACK   # 65.683m
-
-# Heights
-MASS1_HEIGHT = 14.3
-MASS2_HEIGHT = 26.5  # Main tower bulk to RL 48.23
-
-# Roof protrusions (stairwell/plant room overruns) - all at RL 50.38
-ROOF_SOUTH_HEIGHT = 28.65  # RL 50.38 - 21.73
-
-# South stairwell: NE corner aligned with original position
-# From 31.59m to (31.59 - 3.67) = 27.92m from south boundary
-ROOF_STAIR_SOUTH_LENGTH = 3.67
-ROOF_STAIR_SOUTH_WIDTH = 5.59
-ROOF_STAIR_SOUTH_START_FROM_NORTH = (LOT_LENGTH - 31.59) - NORTH_CORRECTION  # 47.91m from anchor
-ROOF_STAIR_SOUTH_EAST_SETBACK = TOWER_EAST_SETBACK + 1.405  # 11.953m from east boundary
-
-# HW Heat Pump: SW corner aligned with original position
-# From 22.1m to (22.1 + 5.16) = 27.26m from south boundary
-ROOF_HW_LENGTH = 5.16
-ROOF_HW_WIDTH = 7.66
-ROOF_HW_START_FROM_NORTH = (LOT_LENGTH - (22.1 + ROOF_HW_LENGTH)) - NORTH_CORRECTION  # 52.24m from anchor
-ROOF_HW_WEST_FROM_BOUNDARY = 15.54
-ROOF_HW_EAST_SETBACK = LOT_WIDTH - ROOF_HW_WEST_FROM_BOUNDARY - ROOF_HW_WIDTH  # 17.3m from east
-
-# North protrusion: RL 49.23, from 44.32m to 50.33m from south boundary
-ROOF_NORTH_HEIGHT = 27.5  # RL 49.23 - 21.73
-ROOF_NORTH_START_FROM_SOUTH = 44.32
-ROOF_NORTH_END_FROM_SOUTH = 50.33
-ROOF_NORTH_LENGTH = ROOF_NORTH_END_FROM_SOUTH - ROOF_NORTH_START_FROM_SOUTH  # 6.01m
-ROOF_NORTH_START_FROM_NORTH = (LOT_LENGTH - ROOF_NORTH_END_FROM_SOUTH) - NORTH_CORRECTION  # 29.17m from anchor
-ROOF_NORTH_EAST_SETBACK = TOWER_EAST_SETBACK + 0.86   # 0.86m back from tower's east edge
-ROOF_NORTH_WIDTH = 5.0  # Approximately 5m wide
-
-# Street-facing masses (at property boundary, in front of tower)
-# Transition point: 62.22% of 80.9m from south = 50.34m from south = 30.56m from north lot boundary
-STREET_TRANSITION_FROM_NORTH_RAW = 30.56
-STREET_TRANSITION_FROM_NORTH = STREET_TRANSITION_FROM_NORTH_RAW - NORTH_CORRECTION
-
-# Northern street-facing mass (taller, adjacent to podium)
-STREET_NORTH_LENGTH = STREET_TRANSITION_FROM_NORTH - PODIUM_SOUTH_EDGE  # 15.835m
-STREET_NORTH_HEIGHT = 9.6
-STREET_NORTH_WIDTH = TOWER_EAST_SETBACK  # fills gap from anchor to tower (7.998m)
-
-# Southern street-facing mass (lower)
-STREET_SOUTH_LENGTH = (LOT_SOUTH_FROM_ANCHOR - TOWER_SOUTH_SETBACK) - STREET_TRANSITION_FROM_NORTH  # 49.848m
-STREET_SOUTH_HEIGHT = 6.45
-STREET_SOUTH_WIDTH = TOWER_EAST_SETBACK  # fills gap from anchor to tower (7.998m)
-
-# Output files
-OUTPUT_FILE = "index.geojson"
-HTML_FILE = "index.html"
+# Anchor in UTM meters
+ANCHOR_X, ANCHOR_Y = _to_utm(ANCHOR_LON, ANCHOR_LAT)
 
 
-def create_utm_transformers(lon: float, lat: float):
-    """Create transformers between WGS84 and appropriate UTM zone."""
-    # Determine UTM zone (Melbourne is zone 55S)
-    utm_zone = int((lon + 180) / 6) + 1
-    utm_crs = pyproj.CRS(f"EPSG:326{utm_zone:02d}" if lat >= 0 else f"EPSG:327{utm_zone:02d}")
-    wgs84 = pyproj.CRS("EPSG:4326")
-
-    to_utm = pyproj.Transformer.from_crs(wgs84, utm_crs, always_xy=True).transform
-    to_wgs84 = pyproj.Transformer.from_crs(utm_crs, wgs84, always_xy=True).transform
-
-    return to_utm, to_wgs84
-
-
-def create_building_mass(anchor_x: float, anchor_y: float,
-                         width: float, length: float,
-                         offset_along: float = 0,
-                         east_setback: float = 0) -> Polygon:
-    """
-    Create a rectangular building mass in UTM coordinates.
-
-    Anchor is at NE corner of existing building (intersection of property east boundary
-    and existing building north edge). Building extends:
-    - West (negative X) by width, starting from east_setback + WEST_CORRECTION
-    - South (negative Y) by length
-
-    offset_along: distance south from anchor to start this mass
-    east_setback: distance west from anchor to start eastern face
-    """
-    # NE corner of building (set back from anchor, with west correction)
-    ne_x = anchor_x - east_setback - WEST_CORRECTION
-    ne_y = anchor_y - offset_along
-
-    nw_x = ne_x - width
-    nw_y = ne_y
-
-    sw_x = nw_x
-    sw_y = ne_y - length
-
-    se_x = ne_x
-    se_y = sw_y
-
+def box(east_setback, south_offset, width, length):
+    """Create rectangle in UTM from offsets relative to anchor."""
+    ne_x = ANCHOR_X - east_setback
+    ne_y = ANCHOR_Y - south_offset
     return Polygon([
         (ne_x, ne_y),
-        (nw_x, nw_y),
-        (sw_x, sw_y),
-        (se_x, se_y),
-        (ne_x, ne_y)
+        (ne_x - width, ne_y),
+        (ne_x - width, ne_y - length),
+        (ne_x, ne_y - length),
+        (ne_x, ne_y),
     ])
 
 
+# Building definitions: (name, east_setback, south_offset, width, length, height, color_group)
+BUILDINGS = [
+    ("Northern podium",           2.215,  0.85,  26.157,  12.475, 14.3,  "podium"),
+    ("Main tower",                7.998, 13.325, 21.866,  65.683, 26.5,  "tower"),
+    ("Street-facing north",       0.0,   13.325,  7.998,  15.835,  9.6,  "street"),
+    ("Street-facing south",       0.0,   29.16,   7.998,  49.848,  6.45, "street"),
+    ("Roof south stairwell",      9.403, 47.91,   5.59,    3.67,  28.65, "roof"),
+    ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.65, "roof"),
+    ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof"),
+]
+
+# Brick colours from architectural drawings
+COLORS = {
+    "tower":  ("rgba(176, 128, 112, 1.0)", "rgba(140, 100, 88, 1.0)"),   # Lighter pinkish-red brick
+    "podium": ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
+    "street": ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
+    "roof":   ("rgba(128, 128, 128, 1.0)", "rgba(96, 96, 96, 1.0)"),     # Grey
+}
+
+
 def main():
-    # Get API key from environment
-    api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+    api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
     if not api_key:
-        raise SystemExit("Error: GOOGLE_MAPS_API_KEY environment variable not set")
+        raise SystemExit("Error: GOOGLE_MAPS_API_KEY not set")
 
-    # Set up coordinate transformers
-    to_utm, to_wgs84 = create_utm_transformers(ANCHOR_LON, ANCHOR_LAT)
+    features = []
+    js_buildings = []
 
-    # Convert anchor point to UTM
-    anchor_x, anchor_y = to_utm(ANCHOR_LON, ANCHOR_LAT)
-    print(f"Anchor point in UTM: ({anchor_x:.2f}, {anchor_y:.2f})")
+    for name, east, south, width, length, height, color_group in BUILDINGS:
+        # Apply adjustments
+        is_podium = name == "Northern podium"
+        if not is_podium:
+            east += WEST_SHIFT
+        if color_group in ("tower", "roof"):
+            height -= MAIN_HEIGHT_REDUCTION
 
-    # Create building masses (aligned N-S initially)
-    # Podium: starts at north setback, uses podium east setback
-    mass1 = create_building_mass(anchor_x, anchor_y, MASS1_WIDTH, MASS1_LENGTH,
-                                 offset_along=PODIUM_NORTH_SETBACK,
-                                 east_setback=PODIUM_EAST_SETBACK)
-    # Tower: starts at podium south edge, uses tower east setback
-    mass2 = create_building_mass(anchor_x, anchor_y, MASS2_WIDTH, MASS2_LENGTH,
-                                 offset_along=PODIUM_SOUTH_EDGE,
-                                 east_setback=TOWER_EAST_SETBACK)
+        # Create box in UTM, rotate, convert to WGS84
+        poly = box(east, south, width, length)
+        rotated = rotate(poly, ROTATION_DEG, origin=(ANCHOR_X, ANCHOR_Y))
+        wgs84 = transform(_to_wgs84, rotated)
 
-    # Street-facing masses (at property boundary, no east setback)
-    # Northern street mass (taller, adjacent to podium)
-    street_north = create_building_mass(anchor_x, anchor_y, STREET_NORTH_WIDTH, STREET_NORTH_LENGTH,
-                                        offset_along=PODIUM_SOUTH_EDGE,
-                                        east_setback=0)
-    # Southern street mass (lower)
-    street_south = create_building_mass(anchor_x, anchor_y, STREET_SOUTH_WIDTH, STREET_SOUTH_LENGTH,
-                                        offset_along=STREET_TRANSITION_FROM_NORTH,
-                                        east_setback=0)
+        features.append({
+            "type": "Feature",
+            "properties": {"name": name, "height": height},
+            "geometry": mapping(wgs84),
+        })
 
-    # Roof protrusions (stairwell/plant room overruns)
-    roof_stair_south = create_building_mass(anchor_x, anchor_y, ROOF_STAIR_SOUTH_WIDTH, ROOF_STAIR_SOUTH_LENGTH,
-                                            offset_along=ROOF_STAIR_SOUTH_START_FROM_NORTH,
-                                            east_setback=ROOF_STAIR_SOUTH_EAST_SETBACK)
-    roof_hw = create_building_mass(anchor_x, anchor_y, ROOF_HW_WIDTH, ROOF_HW_LENGTH,
-                                   offset_along=ROOF_HW_START_FROM_NORTH,
-                                   east_setback=ROOF_HW_EAST_SETBACK)
-    roof_north = create_building_mass(anchor_x, anchor_y, ROOF_NORTH_WIDTH, ROOF_NORTH_LENGTH,
-                                      offset_along=ROOF_NORTH_START_FROM_NORTH,
-                                      east_setback=ROOF_NORTH_EAST_SETBACK)
+        fill, stroke = COLORS[color_group]
+        js_buildings.append({
+            "coords": list(wgs84.exterior.coords[:-1]),
+            "height": height,
+            "fill": fill,
+            "stroke": stroke,
+        })
 
-    print(f"Mass 1 bounds (before rotation): {mass1.bounds}")
-    print(f"Mass 2 bounds (before rotation): {mass2.bounds}")
-    print(f"Street north bounds (before rotation): {street_north.bounds}")
-    print(f"Street south bounds (before rotation): {street_south.bounds}")
-
-    # Rotate all masses around the anchor point (NE corner)
-    mass1_rotated = rotate(mass1, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    mass2_rotated = rotate(mass2, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    street_north_rotated = rotate(street_north, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    street_south_rotated = rotate(street_south, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    roof_stair_south_rotated = rotate(roof_stair_south, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    roof_hw_rotated = rotate(roof_hw, ROTATION_DEG, origin=(anchor_x, anchor_y))
-    roof_north_rotated = rotate(roof_north, ROTATION_DEG, origin=(anchor_x, anchor_y))
-
-    print(f"Mass 1 bounds (after rotation): {mass1_rotated.bounds}")
-    print(f"Mass 2 bounds (after rotation): {mass2_rotated.bounds}")
-    print(f"Street north bounds (after rotation): {street_north_rotated.bounds}")
-    print(f"Street south bounds (after rotation): {street_south_rotated.bounds}")
-
-    # Transform back to WGS84
-    mass1_wgs84 = transform(to_wgs84, mass1_rotated)
-    mass2_wgs84 = transform(to_wgs84, mass2_rotated)
-    street_north_wgs84 = transform(to_wgs84, street_north_rotated)
-    street_south_wgs84 = transform(to_wgs84, street_south_rotated)
-    roof_stair_south_wgs84 = transform(to_wgs84, roof_stair_south_rotated)
-    roof_hw_wgs84 = transform(to_wgs84, roof_hw_rotated)
-    roof_north_wgs84 = transform(to_wgs84, roof_north_rotated)
-
-    # Build GeoJSON
-    geojson = {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Northern podium",
-                    "height": MASS1_HEIGHT
-                },
-                "geometry": mapping(mass1_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Main tower",
-                    "height": MASS2_HEIGHT
-                },
-                "geometry": mapping(mass2_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Street-facing north (taller)",
-                    "height": STREET_NORTH_HEIGHT
-                },
-                "geometry": mapping(street_north_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Street-facing south (lower)",
-                    "height": STREET_SOUTH_HEIGHT
-                },
-                "geometry": mapping(street_south_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Roof south stairwell",
-                    "height": ROOF_SOUTH_HEIGHT
-                },
-                "geometry": mapping(roof_stair_south_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Roof HW heat pump",
-                    "height": ROOF_SOUTH_HEIGHT
-                },
-                "geometry": mapping(roof_hw_wgs84)
-            },
-            {
-                "type": "Feature",
-                "properties": {
-                    "name": "Roof north stairwell",
-                    "height": ROOF_NORTH_HEIGHT
-                },
-                "geometry": mapping(roof_north_wgs84)
-            }
-        ]
-    }
-
-    # Write GeoJSON output
-    with open(OUTPUT_FILE, 'w') as f:
+    # Write GeoJSON
+    geojson = {"type": "FeatureCollection", "features": features}
+    with open("index.geojson", "w") as f:
         json.dump(geojson, f, indent=2)
+    print("Wrote index.geojson")
 
-    print(f"\nWrote {OUTPUT_FILE}")
-
-    # Ground level elevation (AHD ~ sea level)
-    GROUND_ELEVATION = 21.730
-
-    # Building coordinates for polygon
-    mass1_coords = [[c[0], c[1]] for c in mass1_wgs84.exterior.coords[:-1]]
-    mass2_coords = [[c[0], c[1]] for c in mass2_wgs84.exterior.coords[:-1]]
-    street_north_coords = [[c[0], c[1]] for c in street_north_wgs84.exterior.coords[:-1]]
-    street_south_coords = [[c[0], c[1]] for c in street_south_wgs84.exterior.coords[:-1]]
-    roof_stair_south_coords = [[c[0], c[1]] for c in roof_stair_south_wgs84.exterior.coords[:-1]]
-    roof_hw_coords = [[c[0], c[1]] for c in roof_hw_wgs84.exterior.coords[:-1]]
-    roof_north_coords = [[c[0], c[1]] for c in roof_north_wgs84.exterior.coords[:-1]]
-
-    # Write interactive HTML viewer using Google Maps 3D (maps3d library)
-    html_content = f'''<!DOCTYPE html>
+    # Write HTML viewer
+    html = f'''<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Noone Street and Rutland Street Community Housing - 3D Building Model</title>
+  <title>Noone St / Rutland St Community Housing - 3D Model</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    html, body {{ margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    #map-container {{ width: 100%; height: 100vh; }}
+    html, body {{ margin: 0; padding: 0; height: 100%; font-family: system-ui, sans-serif; }}
+    #map {{ width: 100%; height: 100vh; }}
     gmp-map-3d {{ display: block; width: 100%; height: 100%; }}
     #info {{
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      font-size: 14px;
-      z-index: 1;
-      max-width: 320px;
+      position: absolute; top: 10px; left: 10px; background: white;
+      padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-size: 14px; z-index: 1; max-width: 320px;
     }}
-    #info h3 {{ margin: 0 0 8px 0; font-size: 15px; }}
-    #info p {{ margin: 0 0 8px 0; color: #666; font-size: 12px; line-height: 1.4; }}
+    #info h3 {{ margin: 0 0 8px; font-size: 15px; }}
+    #info p {{ margin: 0 0 8px; color: #666; font-size: 12px; line-height: 1.4; }}
     #info a {{ color: #1a73e8; }}
     .note {{ font-size: 11px; color: #888; margin-top: 8px; }}
     /* Hide Google Maps alpha channel warning */
@@ -353,169 +127,52 @@ def main():
   <script src="https://maps.googleapis.com/maps/api/js?key={api_key}&v=alpha&libraries=maps3d" async></script>
 </head>
 <body>
-  <div id="map-container"></div>
+  <div id="map"></div>
   <div id="info">
-    <h3>Noone Street and Rutland Street Community Housing</h3>
-    <p>Tower: {MASS2_HEIGHT}m &bull; Roof peaks: {ROOF_SOUTH_HEIGHT}m / {ROOF_NORTH_HEIGHT}m<br>
-    Podium: {MASS1_HEIGHT}m &bull; Street: {STREET_NORTH_HEIGHT}m / {STREET_SOUTH_HEIGHT}m</p>
-    <p>Load <a href="index.geojson" download="index.geojson">building model</a> into <a href="https://shademap.app" target="_blank">shademap.app</a> to see shade impact at different times of day/year.</p>
-    <p class="note">Use shift+drag or control+drag (depends on browser/os) to change viewing angles.</p>
+    <h3>Noone St / Rutland St Community Housing</h3>
+    <p>Tower: 26.5m &bull; Podium: 14.3m &bull; Street: 9.6m / 6.45m</p>
+    <p>Load <a href="index.geojson" download>building model</a> into
+       <a href="https://shademap.app" target="_blank">shademap.app</a> for shade analysis.</p>
+    <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
   </div>
-
   <script>
-    const GROUND = {GROUND_ELEVATION};
-    const MASS1_COORDS = {json.dumps(mass1_coords)};
-    const MASS2_COORDS = {json.dumps(mass2_coords)};
-    const STREET_NORTH_COORDS = {json.dumps(street_north_coords)};
-    const STREET_SOUTH_COORDS = {json.dumps(street_south_coords)};
-    const ROOF_STAIR_SOUTH_COORDS = {json.dumps(roof_stair_south_coords)};
-    const ROOF_HW_COORDS = {json.dumps(roof_hw_coords)};
-    const ROOF_NORTH_COORDS = {json.dumps(roof_north_coords)};
-    const MASS1_HEIGHT = {MASS1_HEIGHT};
-    const MASS2_HEIGHT = {MASS2_HEIGHT};
-    const STREET_NORTH_HEIGHT = {STREET_NORTH_HEIGHT};
-    const STREET_SOUTH_HEIGHT = {STREET_SOUTH_HEIGHT};
-    const ROOF_SOUTH_HEIGHT = {ROOF_SOUTH_HEIGHT};
-    const ROOF_NORTH_HEIGHT = {ROOF_NORTH_HEIGHT};
-    const CENTER_LAT = {ANCHOR_LAT - 0.0015};
-    const CENTER_LNG = {ANCHOR_LON};
+    const GROUND = {GROUND_RL};
+    const BUILDINGS = {json.dumps(js_buildings)};
 
-    async function createMap() {{
-      // Import the library
+    async function init() {{
       const {{ Map3DElement, Polygon3DElement, AltitudeMode, MapMode }} = await google.maps.importLibrary("maps3d");
 
-      // Create the 3D map
-      const map3D = new Map3DElement({{
-        center: {{ lat: CENTER_LAT, lng: CENTER_LNG, altitude: 200 }},
-        range: 400,
-        tilt: 60,
-        heading: 0,
-        mode: MapMode.HYBRID
+      const map = new Map3DElement({{
+        center: {{ lat: {ANCHOR_LAT - 0.0015}, lng: {ANCHOR_LON}, altitude: 200 }},
+        range: 400, tilt: 60, heading: 0, mode: MapMode.HYBRID
       }});
+      map.style.width = map.style.height = "100%";
+      document.getElementById("map").appendChild(map);
 
-      map3D.style.width = '100%';
-      map3D.style.height = '100%';
-      document.getElementById('map-container').appendChild(map3D);
-
-      // Create podium polygon
-      const podium = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 140, 0, 1.0)",
-        strokeColor: "rgba(200, 100, 0, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      podium.outerCoordinates = MASS1_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + MASS1_HEIGHT
-      }}));
-      map3D.appendChild(podium);
-
-      // Create tower polygon
-      const tower = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 140, 0, 1.0)",
-        strokeColor: "rgba(200, 100, 0, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      tower.outerCoordinates = MASS2_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + MASS2_HEIGHT
-      }}));
-      map3D.appendChild(tower);
-
-      // Create street-facing north polygon (taller)
-      const streetNorth = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 180, 100, 1.0)",
-        strokeColor: "rgba(200, 120, 50, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      streetNorth.outerCoordinates = STREET_NORTH_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + STREET_NORTH_HEIGHT
-      }}));
-      map3D.appendChild(streetNorth);
-
-      // Create street-facing south polygon (lower)
-      const streetSouth = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 200, 150, 1.0)",
-        strokeColor: "rgba(200, 140, 80, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      streetSouth.outerCoordinates = STREET_SOUTH_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + STREET_SOUTH_HEIGHT
-      }}));
-      map3D.appendChild(streetSouth);
-
-      // Create roof south stairwell
-      const roofStairSouth = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      roofStairSouth.outerCoordinates = ROOF_STAIR_SOUTH_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + ROOF_SOUTH_HEIGHT
-      }}));
-      map3D.appendChild(roofStairSouth);
-
-      // Create roof HW heat pump
-      const roofHW = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      roofHW.outerCoordinates = ROOF_HW_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + ROOF_SOUTH_HEIGHT
-      }}));
-      map3D.appendChild(roofHW);
-
-      // Create roof north stairwell
-      const roofNorth = new Polygon3DElement({{
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      }});
-      roofNorth.outerCoordinates = ROOF_NORTH_COORDS.map(([lng, lat]) => ({{
-        lat, lng, altitude: GROUND + ROOF_NORTH_HEIGHT
-      }}));
-      map3D.appendChild(roofNorth);
-
-      console.log('Map and polygons created');
+      for (const b of BUILDINGS) {{
+        const poly = new Polygon3DElement({{
+          altitudeMode: AltitudeMode.ABSOLUTE,
+          extruded: true,
+          fillColor: b.fill,
+          strokeColor: b.stroke,
+          strokeWidth: 2,
+          drawsOccludedSegments: false
+        }});
+        poly.outerCoordinates = b.coords.map(([lng, lat]) => ({{
+          lat, lng, altitude: GROUND + b.height
+        }}));
+        map.appendChild(poly);
+      }}
     }}
 
-    window.onload = createMap;
+    window.onload = init;
   </script>
 </body>
 </html>'''
 
-    with open(HTML_FILE, 'w') as f:
-        f.write(html_content)
-
-    print(f"Wrote {HTML_FILE}")
-
-    # Print coordinates for verification
-    print("\nMass 1 coordinates (WGS84):")
-    for coord in mass1_wgs84.exterior.coords:
-        print(f"  [{coord[0]:.8f}, {coord[1]:.8f}]")
-
-    print("\nMass 2 coordinates (WGS84):")
-    for coord in mass2_wgs84.exterior.coords:
-        print(f"  [{coord[0]:.8f}, {coord[1]:.8f}]")
+    with open("index.html", "w") as f:
+        f.write(html)
+    print("Wrote index.html")
 
 
 if __name__ == "__main__":

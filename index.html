@@ -2,26 +2,19 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Noone Street and Rutland Street Community Housing - 3D Building Model</title>
+  <title>Noone St / Rutland St Community Housing - 3D Model</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    #map-container { width: 100%; height: 100vh; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, sans-serif; }
+    #map { width: 100%; height: 100vh; }
     gmp-map-3d { display: block; width: 100%; height: 100%; }
     #info {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      font-size: 14px;
-      z-index: 1;
-      max-width: 320px;
+      position: absolute; top: 10px; left: 10px; background: white;
+      padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-size: 14px; z-index: 1; max-width: 320px;
     }
-    #info h3 { margin: 0 0 8px 0; font-size: 15px; }
-    #info p { margin: 0 0 8px 0; color: #666; font-size: 12px; line-height: 1.4; }
+    #info h3 { margin: 0 0 8px; font-size: 15px; }
+    #info p { margin: 0 0 8px; color: #666; font-size: 12px; line-height: 1.4; }
     #info a { color: #1a73e8; }
     .note { font-size: 11px; color: #888; margin-top: 8px; }
     /* Hide Google Maps alpha channel warning */
@@ -30,152 +23,45 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I&v=alpha&libraries=maps3d" async></script>
 </head>
 <body>
-  <div id="map-container"></div>
+  <div id="map"></div>
   <div id="info">
-    <h3>Noone Street and Rutland Street Community Housing</h3>
-    <p>Tower: 26.5m &bull; Roof peaks: 28.65m / 27.5m<br>
-    Podium: 14.3m &bull; Street: 9.6m / 6.45m</p>
-    <p>Load <a href="index.geojson" download="index.geojson">building model</a> into <a href="https://shademap.app" target="_blank">shademap.app</a> to see shade impact at different times of day/year.</p>
-    <p class="note">Use shift+drag or control+drag (depends on browser/os) to change viewing angles.</p>
+    <h3>Noone St / Rutland St Community Housing</h3>
+    <p>Tower: 26.5m &bull; Podium: 14.3m &bull; Street: 9.6m / 6.45m</p>
+    <p>Load <a href="index.geojson" download>building model</a> into
+       <a href="https://shademap.app" target="_blank">shademap.app</a> for shade analysis.</p>
+    <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
   </div>
-
   <script>
     const GROUND = 21.73;
-    const MASS1_COORDS = [[144.99592285939156, -37.794014158810256], [144.99562810943524, -37.79398532150234], [144.99561077769948, -37.79409687358931], [144.99590552808866, -37.7941257109525]];
-    const MASS2_COORDS = [[144.99584036227873, -37.794119335419246], [144.995593965092, -37.79409522867886], [144.9955027094378, -37.79468256930275], [144.99574910852974, -37.79470667628642]];
-    const STREET_NORTH_COORDS = [[144.99593048784806, -37.79412815289464], [144.99584036227873, -37.794119335419246], [144.9958183627783, -37.794260932843756], [144.99590848851565, -37.794269750340625]];
-    const STREET_SOUTH_COORDS = [[144.99590848851565, -37.794269750340625], [144.9958183627783, -37.794260932843756], [144.99574910852974, -37.79470667628642], [144.99583923479597, -37.79471549385082]];
-    const ROOF_STAIR_SOUTH_COORDS = [[144.99577648103306, -37.79442704737138], [144.9957134898048, -37.79442088453799], [144.99570839101477, -37.79445370186764], [144.99577138227025, -37.794459864704514]];
-    const ROOF_HW_COORDS = [[144.9956814774971, -37.79445706020121], [144.99559516034006, -37.79444861516649], [144.9955879913908, -37.79449475614341], [144.99567430860026, -37.79450320118482]];
-    const ROOF_NORTH_COORDS = [[144.99580865794726, -37.79426007414227], [144.99575231528976, -37.794254561789316], [144.9957439655496, -37.79430830352513], [144.99580030824694, -37.79431381588317]];
-    const MASS1_HEIGHT = 14.3;
-    const MASS2_HEIGHT = 26.5;
-    const STREET_NORTH_HEIGHT = 9.6;
-    const STREET_SOUTH_HEIGHT = 6.45;
-    const ROOF_SOUTH_HEIGHT = 28.65;
-    const ROOF_NORTH_HEIGHT = 27.5;
-    const CENTER_LAT = -37.795509;
-    const CENTER_LNG = 144.995949;
+    const BUILDINGS = [{"coords": [[144.99592285939156, -37.794014158810256], [144.99562810943524, -37.79398532150234], [144.99561077769948, -37.79409687358931], [144.99590552808866, -37.7941257109525]], "height": 14.3, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99584036227873, -37.794119335419246], [144.995593965092, -37.79409522867886], [144.9955027094378, -37.79468256930275], [144.99574910852974, -37.79470667628642]], "height": 26.5, "fill": "rgba(176, 128, 112, 1.0)", "stroke": "rgba(140, 100, 88, 1.0)"}, {"coords": [[144.99593048784806, -37.79412815289464], [144.99584036227873, -37.794119335419246], [144.9958183627783, -37.794260932843756], [144.99590848851565, -37.794269750340625]], "height": 9.6, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99590848851565, -37.794269750340625], [144.9958183627783, -37.794260932843756], [144.99574910852974, -37.79470667628642], [144.99583923479597, -37.79471549385082]], "height": 6.45, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99577648103306, -37.79442704737138], [144.9957134898048, -37.79442088453799], [144.99570839101477, -37.79445370186764], [144.99577138227025, -37.794459864704514]], "height": 28.65, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.9957102123259, -37.79445987152392], [144.99562389516137, -37.79445142651008], [144.99561672622957, -37.79449756748923], [144.99570304344653, -37.794506012509764]], "height": 28.65, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.99580865794726, -37.79426007414227], [144.99575231528976, -37.794254561789316], [144.9957439655496, -37.79430830352513], [144.99580030824694, -37.79431381588317]], "height": 27.5, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}];
 
-    async function createMap() {
-      // Import the library
+    async function init() {
       const { Map3DElement, Polygon3DElement, AltitudeMode, MapMode } = await google.maps.importLibrary("maps3d");
 
-      // Create the 3D map
-      const map3D = new Map3DElement({
-        center: { lat: CENTER_LAT, lng: CENTER_LNG, altitude: 200 },
-        range: 400,
-        tilt: 60,
-        heading: 0,
-        mode: MapMode.HYBRID
+      const map = new Map3DElement({
+        center: { lat: -37.795509, lng: 144.995949, altitude: 200 },
+        range: 400, tilt: 60, heading: 0, mode: MapMode.HYBRID
       });
+      map.style.width = map.style.height = "100%";
+      document.getElementById("map").appendChild(map);
 
-      map3D.style.width = '100%';
-      map3D.style.height = '100%';
-      document.getElementById('map-container').appendChild(map3D);
-
-      // Create podium polygon
-      const podium = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 140, 0, 1.0)",
-        strokeColor: "rgba(200, 100, 0, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      podium.outerCoordinates = MASS1_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + MASS1_HEIGHT
-      }));
-      map3D.appendChild(podium);
-
-      // Create tower polygon
-      const tower = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 140, 0, 1.0)",
-        strokeColor: "rgba(200, 100, 0, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      tower.outerCoordinates = MASS2_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + MASS2_HEIGHT
-      }));
-      map3D.appendChild(tower);
-
-      // Create street-facing north polygon (taller)
-      const streetNorth = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 180, 100, 1.0)",
-        strokeColor: "rgba(200, 120, 50, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      streetNorth.outerCoordinates = STREET_NORTH_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + STREET_NORTH_HEIGHT
-      }));
-      map3D.appendChild(streetNorth);
-
-      // Create street-facing south polygon (lower)
-      const streetSouth = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(255, 200, 150, 1.0)",
-        strokeColor: "rgba(200, 140, 80, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      streetSouth.outerCoordinates = STREET_SOUTH_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + STREET_SOUTH_HEIGHT
-      }));
-      map3D.appendChild(streetSouth);
-
-      // Create roof south stairwell
-      const roofStairSouth = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      roofStairSouth.outerCoordinates = ROOF_STAIR_SOUTH_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + ROOF_SOUTH_HEIGHT
-      }));
-      map3D.appendChild(roofStairSouth);
-
-      // Create roof HW heat pump
-      const roofHW = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      roofHW.outerCoordinates = ROOF_HW_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + ROOF_SOUTH_HEIGHT
-      }));
-      map3D.appendChild(roofHW);
-
-      // Create roof north stairwell
-      const roofNorth = new Polygon3DElement({
-        altitudeMode: AltitudeMode.ABSOLUTE,
-        extruded: true,
-        fillColor: "rgba(200, 100, 50, 1.0)",
-        strokeColor: "rgba(150, 70, 30, 1.0)",
-        strokeWidth: 2,
-        drawsOccludedSegments: false
-      });
-      roofNorth.outerCoordinates = ROOF_NORTH_COORDS.map(([lng, lat]) => ({
-        lat, lng, altitude: GROUND + ROOF_NORTH_HEIGHT
-      }));
-      map3D.appendChild(roofNorth);
-
-      console.log('Map and polygons created');
+      for (const b of BUILDINGS) {
+        const poly = new Polygon3DElement({
+          altitudeMode: AltitudeMode.ABSOLUTE,
+          extruded: true,
+          fillColor: b.fill,
+          strokeColor: b.stroke,
+          strokeWidth: 2,
+          drawsOccludedSegments: false
+        });
+        poly.outerCoordinates = b.coords.map(([lng, lat]) => ({
+          lat, lng, altitude: GROUND + b.height
+        }));
+        map.appendChild(poly);
+      }
     }
 
-    window.onload = createMap;
+    window.onload = init;
   </script>
 </body>
 </html>

@@ -53,8 +53,8 @@ Three overruns above the main tower roof (RL 48.23):
 
 ## Dependencies
 - Python >=3.12
-- shapely>=2.1.2
 - pyproj>=3.7.2
+- shapely>=2.1.2
 
 ## Environment Variables
 - `GOOGLE_MAPS_API_KEY` - Required for building HTML viewer (set in mise.toml via .env file)
@@ -67,9 +67,8 @@ mise deploy         # Build and deploy to gh-pages branch
 
 ## Technical Notes
 - Coordinates use WGS84 (EPSG:4326)
-- Rotation performed in UTM (EPSG:32755) for accuracy
 - Building rotated -5.8° (clockwise) around NE anchor to align with street
-- Uses shapely for geometric transformations, pyproj for coordinate conversion
+- Rotation performed in UTM (EPSG:32755) via pyproj for accuracy
 
 ## Verification
 1. Load `index.geojson` into geojson.io or shademap.app
