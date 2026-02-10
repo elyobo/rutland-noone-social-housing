@@ -120,7 +120,7 @@ BUILDINGS = [
         STREET_TRANSITION - ANCHOR_SOUTH_OF_LOT_NORTH,
         STREET_SOUTH_WIDTH, STREET_SOUTH_LENGTH, 6.45, "street"),
     ("Roof south stairwell",      9.403, 47.91,   5.59,    3.67,  28.65, "roof"),
-    ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.65, "roof"),
+    ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.4, "roof"),
     ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof"),
     ("Car park west",
         LOT_WIDTH - TOWER_WEST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
