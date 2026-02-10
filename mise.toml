@@ -1,0 +1,47 @@
+[env]
+GOOGLE_MAPS_API_KEY = "AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I"
+GOOGLE_MAPS_FLAT_MAP_ID= "757278b5b147fdbb2e54430f"
+_.file = ".env"
+_.python.venv = { path = ".venv" }
+
+[tools]
+uv = "latest"
+
+[tasks]
+uv-deps = "uv sync"
+build = "python generate_geojson.py"
+serve = "python -m http.server 8000"
+
+[tasks.stl]
+description = "Convert all UTM GeoJSON files to STL (1:500 scale)"
+depends = ["build"]
+run = "for f in *_utm.geojson; do python to_stl.py \"$f\"; done"
+
+[tasks.build-all]
+description = "Build HTML, GeoJSON, and STL files for all scenarios"
+depends = ["stl"]
+
+[tasks.deps]
+depends = ["uv-deps"]
+description = "Install all dependencies"
+alias = "d"
+
+[tasks.deploy]
+description = "Build and deploy to gh-pages"
+depends = ["uv-deps"]
+run = """
+python generate_geojson.py
+mkdir -p /tmp/rutland-deploy
+cp index.html /tmp/rutland-deploy/
+cp *.geojson /tmp/rutland-deploy/
+git stash --include-untracked
+git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+git rm -rf . 2>/dev/null || true
+cp /tmp/rutland-deploy/* .
+git add index.html *.geojson
+git commit -m "Deploy" --allow-empty
+git push origin gh-pages --force
+git checkout main
+git stash pop 2>/dev/null || true
+rm -rf /tmp/rutland-deploy
+"""
