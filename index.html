@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, sans-serif; }
-    #map { width: 100%; height: 100vh; }
+    .map-container { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; }
+    .map-container.hidden { display: none; }
     gmp-map-3d { display: block; width: 100%; height: 100%; }
     #info {
       position: absolute; top: 10px; left: 10px; background: white;
@@ -21,13 +22,18 @@
     .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }
     .legend-swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
     .toggle { display: block; margin-top: 10px; font-size: 12px; cursor: pointer; }
+    .view-mode { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+    .view-mode label { font-size: 12px; font-weight: 500; display: block; margin-bottom: 6px; }
+    .view-mode select { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%; }
     /* Hide Google Maps alpha channel warning */
     [role="region"][aria-label*="alpha channel"] { display: none !important; }
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD8n9exOD7264fsBm4B2C0-3vJIljEXS2I&v=alpha&libraries=maps3d" async></script>
+  <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map3d" class="map-container"></div>
+  <div id="mapFlat" class="map-container hidden"></div>
   <div id="info">
     <h3>Noone St / Rutland St Community Housing</h3>
     <p>Load <a href="index.geojson" download>building model</a> into
@@ -40,23 +46,45 @@
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(0,120,255)"></span>Lot boundary</div>
     </div>
     <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
+    <div class="view-mode">
+      <label>View mode</label>
+      <select id="viewMode">
+        <option value="3d" selected>3D Surrounds</option>
+        <option value="flat">Flat Surrounds</option>
+      </select>
+    </div>
     <label class="toggle"><input type="checkbox" id="occluded"> Show through existing buildings</label>
   </div>
   <script>
+    const CENTER = { lat: -37.794509000000005, lng: 144.995849 };
     const GROUND = 21.73;
     const BUILDINGS = [{"coords": [[144.99592285939156, -37.794014158810256], [144.99562867285962, -37.79398537662654], [144.9956154396165, -37.794070549663516], [144.99590962647827, -37.79409933188934]], "height": 14.3, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99581683031087, -37.794090253114476], [144.9957097795125, -37.79407977963505], [144.99570568105344, -37.794106158689345], [144.995812731889, -37.79411663217351]], "height": 26.5, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.99590558443123, -37.7941257164648], [144.99584036227873, -37.794119335419246], [144.9958183627783, -37.794260932843756], [144.99588358505238, -37.79426731390484]], "height": 9.675, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99590848851565, -37.794269750340625], [144.9958183627783, -37.794260932843756], [144.99574910852974, -37.79470667628642], [144.99583923479597, -37.79471549385082]], "height": 6.45, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99577648103306, -37.79442704737138], [144.9957134898048, -37.79442088453799], [144.99570839101477, -37.79445370186764], [144.99577138227025, -37.794459864704514]], "height": 28.65, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.9957102123259, -37.79445987152392], [144.99562389516137, -37.79445142651008], [144.99561672622957, -37.79449756748923], [144.99570304344653, -37.794506012509764]], "height": 28.4, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.99580865794726, -37.79426007414227], [144.99575231528976, -37.794254561789316], [144.9957439655496, -37.79430830352513], [144.99580030824694, -37.79431381588317]], "height": 27.5, "fill": "rgba(128, 128, 128, 1.0)", "stroke": "rgba(96, 96, 96, 1.0)"}, {"coords": [[144.9955941665437, -37.79409393208153], [144.99555245054745, -37.794089850664825], [144.99547286233792, -37.79460209593243], [144.99551457861543, -37.794606177385056]], "height": 0.01, "fill": "rgba(80, 80, 80, 1.0)", "stroke": "rgba(60, 60, 60, 1.0)"}, {"coords": [[144.9959796796519, -37.79399929237374], [144.99552330586698, -37.79395464224979], [144.9955232919737, -37.79395473167027], [144.99597966575914, -37.7939993817943]], "height": 0.01, "fill": "rgba(0, 120, 255, 1.0)", "stroke": "rgba(0, 80, 200, 1.0)"}, {"coords": [[144.99586730008767, -37.794722615207704], [144.99541092195687, -37.79467796452879], [144.9954109080633, -37.79467805394925], [144.99586728619462, -37.79472270462822]], "height": 0.01, "fill": "rgba(0, 120, 255, 1.0)", "stroke": "rgba(0, 80, 200, 1.0)"}, {"coords": [[144.99597966575914, -37.79399938179431], [144.99597955307416, -37.793999370769804], [144.99586718740161, -37.79472260418305], [144.99586730008767, -37.794722615207704]], "height": 0.01, "fill": "rgba(0, 120, 255, 1.0)", "stroke": "rgba(0, 80, 200, 1.0)"}, {"coords": [[144.99552340465854, -37.79395474269521], [144.9955232919737, -37.793954731670276], [144.99541092195687, -37.79467796452879], [144.99541103464276, -37.79467797555386]], "height": 0.01, "fill": "rgba(0, 120, 255, 1.0)", "stroke": "rgba(0, 80, 200, 1.0)"}, {"coords": [[144.99592299831957, -37.79401326460468], [144.9956288117911, -37.793984482421415], [144.99562867285962, -37.79398537662654], [144.99592285939156, -37.794014158810256]], "height": 1.0, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99592529063167, -37.79399851021266], [144.99563110416037, -37.79396972803669], [144.9956309652289, -37.79397062224183], [144.9959251517037, -37.79399940441824]], "height": 1.0, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.9959251517037, -37.793999404418244], [144.9956309652289, -37.79397062224183], [144.9956288117911, -37.793984482421415], [144.99592299831957, -37.79401326460468]], "height": 1.0, "fill": "rgba(0, 0, 0, 0.7)", "stroke": "rgba(0, 0, 0, 0.9)"}, {"coords": [[144.9959232255087, -37.794325841550744], [144.99590012499306, -37.79432358151109], [144.99589998606402, -37.79432447571656], [144.99592308657992, -37.79432673575626]], "height": 1.0, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99586247436127, -37.794716859700344], [144.99583937372674, -37.794714599645495], [144.99583923479597, -37.7947154938508], [144.9958623354308, -37.79471775390568]], "height": 1.0, "fill": "rgba(140, 68, 68, 1.0)", "stroke": "rgba(100, 48, 48, 1.0)"}, {"coords": [[144.99592308657992, -37.79432673575626], [144.99589998606402, -37.79432447571658], [144.99583937372674, -37.794714599645495], [144.99586247436127, -37.794716859700344]], "height": 1.0, "fill": "rgba(0, 0, 0, 0.7)", "stroke": "rgba(0, 0, 0, 0.9)"}, {"coords": [[144.99584036227873, -37.794119335419246], [144.9958183488853, -37.79426102226429], [144.99579124806505, -37.79425837082807], [144.99578289835242, -37.79431211256739], [144.99580999919183, -37.794314764006074], [144.99579231335616, -37.79442859634303], [144.99576521247616, -37.794425944899174], [144.99576011370846, -37.794458762231685], [144.9957872146002, -37.79446141367703], [144.99574910852974, -37.79470667628642], [144.99563492383677, -37.794695504847844], [144.99564131197874, -37.794654389301485], [144.99562328223698, -37.79465262532333], [144.99561689408523, -37.794693740868446], [144.9955027094378, -37.79468256930275], [144.9955636013712, -37.79429065718475], [144.99567748117903, -37.794301798908236], [144.995681579662, -37.79427541985634], [144.99556769989374, -37.79426427813791], [144.995593965092, -37.79409522867886]], "height": 26.5, "fill": "rgba(176, 128, 112, 1.0)", "stroke": "rgba(140, 100, 88, 1.0)"}];
+    const FLAT_MAP_ID = "757278b5b147fdbb2e54430f";
+
+    // Parse rgba string to [r,g,b,a] array for deck.gl
+    function parseRgba(rgba) {
+      const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!match) return [128, 128, 128, 200];
+      return [
+        parseInt(match[1]),
+        parseInt(match[2]),
+        parseInt(match[3]),
+        Math.round((match[4] !== undefined ? parseFloat(match[4]) : 1) * 255)
+      ];
+    }
 
     async function init() {
       const { Map3DElement, Polygon3DElement, AltitudeMode, MapMode } = await google.maps.importLibrary("maps3d");
 
-      const map = new Map3DElement({
-        center: { lat: -37.795009, lng: 144.995749, altitude: 120 },
+      // 3D map (full photorealistic) with Polygon3DElement
+      const map3d = new Map3DElement({
+        center: { ...CENTER, altitude: 120 },
         range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
       });
-      map.style.width = map.style.height = "100%";
-      document.getElementById("map").appendChild(map);
+      map3d.style.width = map3d.style.height = "100%";
+      document.getElementById("map3d").appendChild(map3d);
 
-      const polygons = [];
+      const polygons3d = [];
       for (const b of BUILDINGS) {
         const poly = new Polygon3DElement({
           altitudeMode: AltitudeMode.ABSOLUTE,
@@ -69,12 +97,57 @@
         poly.outerCoordinates = b.coords.map(([lng, lat]) => ({
           lat, lng, altitude: GROUND + b.height
         }));
-        map.appendChild(poly);
-        polygons.push(poly);
+        map3d.appendChild(poly);
+        polygons3d.push(poly);
       }
 
+      // Flat map with deck.gl (only if Map ID configured)
+      if (FLAT_MAP_ID && typeof deck !== "undefined") {
+        const mapFlat = new google.maps.Map(document.getElementById("mapFlat"), {
+          center: CENTER,
+          zoom: 18,
+          tilt: 45,
+          heading: 0,
+          mapId: FLAT_MAP_ID
+        });
+
+        // Convert buildings to deck.gl format
+        const deckData = BUILDINGS.map(b => ({
+          polygon: b.coords.map(([lng, lat]) => [lng, lat]),
+          height: b.height,
+          fillColor: parseRgba(b.fill),
+          strokeColor: parseRgba(b.stroke)
+        }));
+
+        const polygonLayer = new deck.PolygonLayer({
+          id: "buildings",
+          data: deckData,
+          extruded: true,
+          wireframe: true,
+          getPolygon: d => d.polygon,
+          getElevation: d => d.height,
+          getFillColor: d => d.fillColor,
+          getLineColor: d => d.strokeColor,
+          getLineWidth: 2,
+          pickable: true
+        });
+
+        const overlay = new deck.GoogleMapsOverlay({
+          layers: [polygonLayer]
+        });
+        overlay.setMap(mapFlat);
+      }
+
+      // View mode switching
+      document.getElementById("viewMode").addEventListener("change", (e) => {
+        const is3d = e.target.value === "3d";
+        document.getElementById("map3d").classList.toggle("hidden", !is3d);
+        document.getElementById("mapFlat").classList.toggle("hidden", is3d);
+      });
+
+      // Occlusion toggle (3D mode only)
       document.getElementById("occluded").addEventListener("change", (e) => {
-        for (const p of polygons) p.drawsOccludedSegments = e.target.checked;
+        for (const p of polygons3d) p.drawsOccludedSegments = e.target.checked;
       });
     }
 

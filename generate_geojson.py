@@ -280,6 +280,9 @@ def main():
     if not api_key:
         raise SystemExit("Error: GOOGLE_MAPS_API_KEY not set")
 
+    # Optional: Map ID with flattened/hidden buildings (created in Cloud Console)
+    flat_map_id = os.environ.get("GOOGLE_MAPS_FLAT_MAP_ID", "")
+
     features = []
     js_buildings = []
 
@@ -328,6 +331,17 @@ def main():
         json.dump(geojson, f, indent=2)
     print("Wrote index.geojson")
 
+    # Determine view mode options based on whether flat map ID is configured
+    if flat_map_id:
+        view_options = '''
+        <option value="3d" selected>3D Surrounds</option>
+        <option value="flat">Flat Surrounds</option>'''
+        deckgl_script = '<script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>'
+    else:
+        view_options = '''
+        <option value="3d" selected>3D Surrounds</option>'''
+        deckgl_script = ''
+
     # Write HTML viewer
     html = f'''<!DOCTYPE html>
 <html>
@@ -337,7 +351,8 @@ def main():
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html, body {{ margin: 0; padding: 0; height: 100%; font-family: system-ui, sans-serif; }}
-    #map {{ width: 100%; height: 100vh; }}
+    .map-container {{ position: absolute; top: 0; left: 0; width: 100%; height: 100vh; }}
+    .map-container.hidden {{ display: none; }}
     gmp-map-3d {{ display: block; width: 100%; height: 100%; }}
     #info {{
       position: absolute; top: 10px; left: 10px; background: white;
@@ -352,13 +367,18 @@ def main():
     .legend-item {{ display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }}
     .legend-swatch {{ width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }}
     .toggle {{ display: block; margin-top: 10px; font-size: 12px; cursor: pointer; }}
+    .view-mode {{ margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }}
+    .view-mode label {{ font-size: 12px; font-weight: 500; display: block; margin-bottom: 6px; }}
+    .view-mode select {{ font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%; }}
     /* Hide Google Maps alpha channel warning */
     [role="region"][aria-label*="alpha channel"] {{ display: none !important; }}
   </style>
   <script src="https://maps.googleapis.com/maps/api/js?key={api_key}&v=alpha&libraries=maps3d" async></script>
+  {deckgl_script}
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map3d" class="map-container"></div>
+  <div id="mapFlat" class="map-container hidden"></div>
   <div id="info">
     <h3>Noone St / Rutland St Community Housing</h3>
     <p>Load <a href="index.geojson" download>building model</a> into
@@ -371,23 +391,43 @@ def main():
       <div class="legend-item"><span class="legend-swatch" style="background:rgb(0,120,255)"></span>Lot boundary</div>
     </div>
     <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
+    <div class="view-mode">
+      <label>View mode</label>
+      <select id="viewMode">{view_options}
+      </select>
+    </div>
     <label class="toggle"><input type="checkbox" id="occluded"> Show through existing buildings</label>
   </div>
   <script>
+    const CENTER = {{ lat: {ANCHOR_LAT - 0.0005}, lng: {ANCHOR_LON - 0.0001} }};
     const GROUND = {GROUND_RL};
     const BUILDINGS = {json.dumps(js_buildings)};
+    const FLAT_MAP_ID = "{flat_map_id}";
+
+    // Parse rgba string to [r,g,b,a] array for deck.gl
+    function parseRgba(rgba) {{
+      const match = rgba.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/);
+      if (!match) return [128, 128, 128, 200];
+      return [
+        parseInt(match[1]),
+        parseInt(match[2]),
+        parseInt(match[3]),
+        Math.round((match[4] !== undefined ? parseFloat(match[4]) : 1) * 255)
+      ];
+    }}
 
     async function init() {{
       const {{ Map3DElement, Polygon3DElement, AltitudeMode, MapMode }} = await google.maps.importLibrary("maps3d");
 
-      const map = new Map3DElement({{
-        center: {{ lat: {ANCHOR_LAT - 0.001}, lng: {ANCHOR_LON - 0.0002}, altitude: 120 }},
+      // 3D map (full photorealistic) with Polygon3DElement
+      const map3d = new Map3DElement({{
+        center: {{ ...CENTER, altitude: 120 }},
         range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
       }});
-      map.style.width = map.style.height = "100%";
-      document.getElementById("map").appendChild(map);
+      map3d.style.width = map3d.style.height = "100%";
+      document.getElementById("map3d").appendChild(map3d);
 
-      const polygons = [];
+      const polygons3d = [];
       for (const b of BUILDINGS) {{
         const poly = new Polygon3DElement({{
           altitudeMode: AltitudeMode.ABSOLUTE,
@@ -400,12 +440,57 @@ def main():
         poly.outerCoordinates = b.coords.map(([lng, lat]) => ({{
           lat, lng, altitude: GROUND + b.height
         }}));
-        map.appendChild(poly);
-        polygons.push(poly);
+        map3d.appendChild(poly);
+        polygons3d.push(poly);
       }}
 
+      // Flat map with deck.gl (only if Map ID configured)
+      if (FLAT_MAP_ID && typeof deck !== "undefined") {{
+        const mapFlat = new google.maps.Map(document.getElementById("mapFlat"), {{
+          center: CENTER,
+          zoom: 18,
+          tilt: 45,
+          heading: 0,
+          mapId: FLAT_MAP_ID
+        }});
+
+        // Convert buildings to deck.gl format
+        const deckData = BUILDINGS.map(b => ({{
+          polygon: b.coords.map(([lng, lat]) => [lng, lat]),
+          height: b.height,
+          fillColor: parseRgba(b.fill),
+          strokeColor: parseRgba(b.stroke)
+        }}));
+
+        const polygonLayer = new deck.PolygonLayer({{
+          id: "buildings",
+          data: deckData,
+          extruded: true,
+          wireframe: true,
+          getPolygon: d => d.polygon,
+          getElevation: d => d.height,
+          getFillColor: d => d.fillColor,
+          getLineColor: d => d.strokeColor,
+          getLineWidth: 2,
+          pickable: true
+        }});
+
+        const overlay = new deck.GoogleMapsOverlay({{
+          layers: [polygonLayer]
+        }});
+        overlay.setMap(mapFlat);
+      }}
+
+      // View mode switching
+      document.getElementById("viewMode").addEventListener("change", (e) => {{
+        const is3d = e.target.value === "3d";
+        document.getElementById("map3d").classList.toggle("hidden", !is3d);
+        document.getElementById("mapFlat").classList.toggle("hidden", is3d);
+      }});
+
+      // Occlusion toggle (3D mode only)
       document.getElementById("occluded").addEventListener("change", (e) => {{
-        for (const p of polygons) p.drawsOccludedSegments = e.target.checked;
+        for (const p of polygons3d) p.drawsOccludedSegments = e.target.checked;
       }});
     }}
 

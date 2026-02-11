@@ -70,6 +70,10 @@ Three overruns above the main tower roof (RL 48.23):
 
 ## Environment Variables
 - `GOOGLE_MAPS_API_KEY` - Required for building HTML viewer (set in mise.toml via .env file)
+- `GOOGLE_MAPS_FLAT_MAP_ID` - Optional Map ID with flattened/hidden buildings for clearer model visibility
+  - Create in [Google Cloud Console](https://console.cloud.google.com/google/maps-apis/studio/styles) using "3D Hybrid" template
+  - Set Buildings > Building Style to "Footprints" or hide entirely
+  - Associate the style with a Map ID and set this variable
 
 ## Usage
 ```bash
