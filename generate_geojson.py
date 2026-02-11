@@ -399,7 +399,7 @@ def main():
     <label class="toggle"><input type="checkbox" id="occluded"> Show through existing buildings</label>
   </div>
   <script>
-    const CENTER = {{ lat: {ANCHOR_LAT - 0.0005}, lng: {ANCHOR_LON - 0.0001} }};
+    const CENTER = {{ lat: {ANCHOR_LAT - 0.001}, lng: {ANCHOR_LON - 0.0001} }};
     const GROUND = {GROUND_RL};
     const BUILDINGS = {json.dumps(js_buildings)};
     const FLAT_MAP_ID = "{flat_map_id}";
@@ -421,7 +421,7 @@ def main():
 
       // 3D map (full photorealistic) with Polygon3DElement
       const map3d = new Map3DElement({{
-        center: {{ ...CENTER, altitude: 120 }},
+        center: {{ ...CENTER, altitude: 80 }},
         range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
       }});
       map3d.style.width = map3d.style.height = "100%";
@@ -447,9 +447,9 @@ def main():
       // Flat map with deck.gl (only if Map ID configured)
       if (FLAT_MAP_ID && typeof deck !== "undefined") {{
         const mapFlat = new google.maps.Map(document.getElementById("mapFlat"), {{
-          center: CENTER,
-          zoom: 18,
-          tilt: 45,
+          center: {{ ...CENTER, lat: {ANCHOR_LAT} }},
+          zoom: 19,
+          tilt: 60,
           heading: 0,
           mapId: FLAT_MAP_ID
         }});
