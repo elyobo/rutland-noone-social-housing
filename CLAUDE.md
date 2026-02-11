@@ -38,7 +38,7 @@ Note that sizes are generally calculated based on offsets from lot boundaries; p
 | 6 | Roof south stairwell | 28.65m | 50.380 | 5.59m | 3.67m |
 | 7 | Roof HW heat pump | 28.4m | 50.130 | 7.66m | 5.16m |
 | 8 | Roof north stairwell | 27.5m | 49.230 | 5.0m | 6.01m |
-| 9 | Car park west | 0.11m | 21.840 | 3.702m | 57.285m |
+| 9 | Car park west | 0.11m | 21.840 | 14.108m | 57.285m |
 
 Ground level: RL 21.730 AHD
 

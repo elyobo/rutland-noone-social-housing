@@ -41,8 +41,8 @@ PODIUM_WEST_SETBACK = 9.628
 PODIUM_NORTH_SETBACK = 2.25
 PODIUM_SOUTH_SETBACK = 11.775  # South edge of podium
 
-STAIR_EAST_SETBACK = 13.0
-STAIR_WEST_SETBACK = 18.0
+STAIR_EAST_SETBACK = 12.408
+STAIR_WEST_SETBACK = 18.492  # West edge at 22.008m from lot east (12.408 + 9.6)
 
 STREET_NORTH_EAST_SETBACK = 4.76
 STREET_SOUTH_EAST_SETBACK = 2.55
@@ -63,7 +63,7 @@ SOUTH_SHAFT_SOUTH_OFFSET = 47.91 + ANCHOR_SOUTH_OF_LOT_NORTH  # From lot north
 
 # West notch (light well, aligned with north shaft)
 WEST_NOTCH_LENGTH = TOWER_NORTH_SETBACK - PODIUM_SOUTH_SETBACK  # N-S extent = gap between podium and tower
-WEST_NOTCH_EAST_SETBACK = 22.308  # Back of notch from lot east (aligns with lift shaft west edge)
+WEST_NOTCH_EAST_SETBACK = LOT_WIDTH - STAIR_WEST_SETBACK  # Back of notch aligns with stair core west edge
 
 # South notch (corridor light well, centered in tower)
 SOUTH_NOTCH_WIDTH = 1.6  # E-W extent
@@ -93,7 +93,7 @@ STREET_SOUTH_WIDTH = TOWER_EAST_SETBACK - STREET_SOUTH_EAST_SETBACK
 STREET_NORTH_LENGTH = STREET_TRANSITION - TOWER_NORTH_SETBACK
 STREET_SOUTH_LENGTH = (LOT_LENGTH - TOWER_SOUTH_SETBACK) - STREET_TRANSITION
 
-CARPARK_WIDTH = TOWER_WEST_SETBACK - CARPARK_WEST_SETBACK
+CARPARK_WIDTH = STAIR_WEST_SETBACK - CARPARK_WEST_SETBACK  # Extends east to stair core west edge
 CARPARK_LENGTH = LOT_LENGTH - CARPARK_NORTH_SETBACK - CARPARK_SOUTH_SETBACK
 
 # Heights (metres above ground)
@@ -154,7 +154,7 @@ BUILDINGS = [
     ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.4, "roof", True),
     ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof", True),
     ("Car park west",
-        LOT_WIDTH - TOWER_WEST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
+        LOT_WIDTH - STAIR_WEST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,  # East edge at stair core west edge
         CARPARK_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
         CARPARK_WIDTH, CARPARK_LENGTH, MIN_DIMENSION, "carpark", False),
 ]
