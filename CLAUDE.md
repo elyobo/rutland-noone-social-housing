@@ -65,9 +65,9 @@ The tool supports multiple building scenarios for comparison:
 | ID | Label | Tower Height | West Shift | Street Masses | Tower East Setback | Fence East |
 |----|-------|-------------|------------|---------------|-------------------|------------|
 | `proposal` | Proposal (8 storeys) | 26.5m | 0m | Yes | 10.548m | 0.5m |
-| `six-floors` | 6 storeys | 19.6m | 4.384m | Yes | 10.548m | 4.0m |
-| `six-floors-no-setback` | 6 storeys, wider footprint | 19.6m | 8.086m | No | 6.05m | 4.0m |
-| `six-floors-more-setback` | 6 storeys, larger setback | 19.6m | 8.086m | No | 10.548m | 4.0m |
+| `six-floors` | 6 storeys | 20.1m | 4.384m | Yes | 10.548m | 4.0m |
+| `six-floors-no-setback` | 6 storeys, wider footprint | 20.1m | 8.086m | No | 6.05m | 4.0m |
+| `six-floors-more-setback` | 6 storeys, larger setback | 20.1m | 8.086m | No | 10.548m | 4.0m |
 
 - **West Shift**: moves all masses except podium/fences westward
   - Scenario 2: car park touches west lot boundary

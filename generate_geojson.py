@@ -124,7 +124,7 @@ SCENARIOS = [
     {
         "id": "six-floors",
         "label": "6 storeys",
-        "height_reduction": 6.9,
+        "height_reduction": 6.4,
         "west_shift": CARPARK_WEST_SETBACK,
         "tower_east_setback": TOWER_EAST_SETBACK,
         "include_street_masses": True,
@@ -147,7 +147,7 @@ SCENARIOS = [
     {
         "id": "six-floors-no-setback",
         "label": "6 storeys, wider footprint",
-        "height_reduction": 6.9,
+        "height_reduction": 6.4,
         "west_shift": TOWER_WEST_SETBACK,  # Abut west lot boundary
         "tower_east_setback": 6.05,
         "include_street_masses": False,
@@ -171,7 +171,7 @@ SCENARIOS = [
     {
         "id": "six-floors-more-setback",
         "label": "6 storeys, larger setback",
-        "height_reduction": 6.9,
+        "height_reduction": 6.4,
         "west_shift": TOWER_WEST_SETBACK,  # Abut west lot boundary
         "tower_east_setback": TOWER_EAST_SETBACK,  # Original east position (shifts with west_shift)
         "include_street_masses": False,
