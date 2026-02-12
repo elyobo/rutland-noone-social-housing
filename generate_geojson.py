@@ -45,6 +45,7 @@ STAIR_WEST_SETBACK = 18.492  # West edge at 22.008m from lot east (12.408 + 9.6)
 STREET_NORTH_EAST_SETBACK = 4.76
 STREET_SOUTH_EAST_SETBACK = 2.55
 STREET_TRANSITION = 30.56  # N-S position where 9.6m transitions to 6.45m
+STREET_SHAFT_INFILL_EAST_SETBACK = 2.85 + 4.758  # 7.608m from lot east boundary
 
 # Stairwell shafts (cut notches into main tower east face)
 SHAFT_EAST_SETBACK = 12.953  # From lot east boundary (same for both)
@@ -89,7 +90,9 @@ STAIR_LENGTH = TOWER_NORTH_SETBACK - PODIUM_SOUTH_SETBACK
 STREET_NORTH_WIDTH = TOWER_EAST_SETBACK - STREET_NORTH_EAST_SETBACK
 STREET_SOUTH_WIDTH = TOWER_EAST_SETBACK - STREET_SOUTH_EAST_SETBACK
 STREET_NORTH_LENGTH = STREET_TRANSITION - TOWER_NORTH_SETBACK
-STREET_SOUTH_LENGTH = (LOT_LENGTH - TOWER_SOUTH_SETBACK) - STREET_TRANSITION
+# Southern mass runs from tower south end northward to southern edge of northern stairwell notch
+STREET_SOUTH_NORTH_EDGE = NORTH_SHAFT_SOUTH_OFFSET + NORTH_SHAFT_LENGTH  # Where it ends (from lot north)
+STREET_SOUTH_LENGTH = (LOT_LENGTH - TOWER_SOUTH_SETBACK) - STREET_SOUTH_NORTH_EDGE
 
 CARPARK_WIDTH = STAIR_WEST_SETBACK - CARPARK_WEST_SETBACK  # Extends east to stair core west edge
 CARPARK_LENGTH = LOT_LENGTH - CARPARK_NORTH_SETBACK - CARPARK_SOUTH_SETBACK
@@ -122,74 +125,130 @@ SCENARIOS = [
         ),
     },
     {
-        "id": "six-floors",
-        "label": "6 storeys",
-        "height_reduction": 6.4,
-        "west_shift": CARPARK_WEST_SETBACK,
+        "id": "seven-floors-tier2-moderate",
+        "label": "7 storeys (Tier 2, Mod 3 Option B)",
+        "height_reduction": 3.2,
+        "west_shift": 5.0,
         "tower_east_setback": TOWER_EAST_SETBACK,
-        "include_street_masses": True,
-        "fence_east_offset": 4.0,
-        "description": (
-            "<strong>Height reduced to 6 storeys</strong> &mdash; matching the "
-            "tallest existing buildings in the suburb (210 Alexandra Parade East "
-            "and 122 Roseneath Street, both 6 storeys and cited by the applicant "
-            "as neighbourhood character precedent)."
-            "<br><br>"
-            "<strong>Key changes:</strong> Building shifted 4.4m west so external "
-            "car park reaches the west lot boundary. Street-facing step-backs "
-            "retained. Street fence moved to the 4.0m statutory setback line."
-            "<br><br>"
-            "<strong>Estimated yield:</strong> ~86&ndash;94 dwellings (vs 114 proposed). "
-            "The GRZ height override drops to ~2.2&times;, within existing "
-            "Clause 52.20 precedent."
-        ),
-    },
-    {
-        "id": "six-floors-no-setback",
-        "label": "6 storeys, wider footprint",
-        "height_reduction": 6.4,
-        "west_shift": TOWER_WEST_SETBACK,  # Abut west lot boundary
-        "tower_east_setback": 6.05,
-        "include_street_masses": False,
-        "include_carpark": False,  # Parking under wider building
-        "fence_east_offset": 4.0,
-        "description": (
-            "<strong>Tower shifted west and widened</strong> &mdash; tower abuts "
-            "the western lot boundary, east setback reduced from 10.5m to 6.1m. "
-            "The wider floor plate recovers dwellings lost from the height reduction."
-            "<br><br>"
-            "<strong>Key changes:</strong> Street-facing step-backs eliminated for "
-            "a simpler vertical form. No external car park (parking accommodated "
-            "within the wider ground floor). Straight vehicle entry possible from "
-            "Noone Street."
-            "<br><br>"
-            "<strong>Estimated yield:</strong> ~111&ndash;122 dwellings, potentially "
-            "matching or exceeding the 8-storey proposal while improving compliance "
-            "with the MPS, heritage adjacency, and building heights policies."
-        ),
-    },
-    {
-        "id": "six-floors-more-setback",
-        "label": "6 storeys, larger setback",
-        "height_reduction": 6.4,
-        "west_shift": TOWER_WEST_SETBACK,  # Abut west lot boundary
-        "tower_east_setback": TOWER_EAST_SETBACK,  # Original east position (shifts with west_shift)
         "include_street_masses": False,
         "include_carpark": False,
         "fence_east_offset": 4.0,
         "description": (
-            "<strong>Tower shifted west with generous setback</strong> &mdash; "
-            "tower abuts the western lot boundary but keeps the original east "
-            "setback, creating a ~12m Rutland Street frontage."
+            "<strong>Height reduced to 7 storeys with westward adjustment</strong> &mdash; "
+            "Building shifted 5m west (Modification 3 Option B) enabling 6-9m Rutland Street "
+            "setback with enhanced landscaping and canopy trees. Main tower widens from 21.9m "
+            "to 26.9m to partially offset dwelling loss from height reduction."
             "<br><br>"
-            "<strong>Key changes:</strong> Deep-soil planting zone, canopy trees, "
-            "and front gardens along the full Rutland Street frontage. Reduced "
-            "afternoon overshadowing of heritage houses across the street. No "
-            "external car park. Straight vehicle entry from Noone Street."
+            "<strong>Planning benefits:</strong> Height override drops to 2.6&times; the 9m GRZ2 limit "
+            "(vs 2.9&times; for 8 storeys), approaching the 2.4&times; Wellington Street precedent. Better "
+            "heritage interface transition (approximately 3.8:1 vs 4.4:1 height ratio to "
+            "single-storey terraces across Rutland Street). Substantial landscaping buffer with "
+            "deep soil planting and canopy coverage fully within site boundaries."
             "<br><br>"
-            "<strong>Estimated yield:</strong> ~92&ndash;94 dwellings. Maximises "
-            "green space and amenity for residents and the streetscape, with the "
-            "strongest planning policy compliance of all scenarios."
+            "<strong>Key features:</strong> Vehicle access from Noone Street (eliminates Alexandra "
+            "Parade East underpass conflicts). Parking accommodated under wider building footprint. "
+            "Street-facing step-backs removed for simpler vertical form. 4.0m statutory setback "
+            "fence line. Subject to AS5100 railway clearance risk assessment (building 15-16m from "
+            "stabling siding centreline, within 10-20m zone)."
+            "<br><br>"
+            "<strong>Estimated yield:</strong> Approximately 100-108 dwellings (vs 114 proposed), "
+            "maintaining a 3.3-3.6&times; multiplier over existing 30 units."
+        ),
+    },
+    {
+        "id": "six-floors-tier1",
+        "label": "6 storeys (Tier 1)",
+        "height_reduction": 6.4,
+        "west_shift": 0.0,
+        "tower_east_setback": 4.0,
+        "include_street_masses": False,
+        "fence_east_offset": 4.0,
+        "description": (
+            "<strong>Height reduced to 6 storeys, Tier 1 modifications</strong> &mdash; "
+            "Achievable without westward building shift. Height matches Clifton Hill's tallest "
+            "existing buildings (210 Alexandra Parade East and 122 Roseneath Street, both "
+            "6 storeys and cited by applicant as neighbourhood precedent)."
+            "<br><br>"
+            "<strong>Key changes:</strong> Tower east face adjusted to 4.0m statutory setback "
+            "(from 10.5m), widening building from 21.9m to 28.4m within existing footprint. "
+            "External car park retained with vehicle access via Noone Street through existing "
+            "9.5m western gap. Street-facing step-backs adjusted to maintain uniform 4.0m "
+            "ground floor setback. No westward shift required."
+            "<br><br>"
+            "<strong>Planning benefits:</strong> Height override drops to 2.2&times; the GRZ2 9m limit, "
+            "within existing Clause 52.20 precedent range. Achieves full compliance with "
+            "Clause 52.20-6.2 street setback standard. Improved heritage interface (approximately "
+            "3.3:1 height ratio vs 4.4:1). Eliminates Alexandra Parade East underpass conflicts. "
+            "No AS5100 assessment required."
+            "<br><br>"
+            "<strong>Estimated yield:</strong> Approximately 86-94 dwellings, delivering a "
+            "2.9-3.1&times; multiplier over existing 30 units while substantially improving planning "
+            "compliance."
+        ),
+    },
+    {
+        "id": "six-floors-tier2-moderate",
+        "label": "6 storeys (Tier 2, Mod 3 Option B)",
+        "height_reduction": 6.4,
+        "west_shift": 5.0,
+        "tower_east_setback": TOWER_EAST_SETBACK,
+        "include_street_masses": False,
+        "include_carpark": False,
+        "fence_east_offset": 4.0,
+        "description": (
+            "<strong>Height reduced to 6 storeys with moderate westward adjustment</strong> &mdash; "
+            "Building shifted 5m west (Modification 3 Option B), increasing Rutland Street setback "
+            "to 6.5-8.5m for substantial front gardens and canopy trees. Tower widens from 21.9m "
+            "to 26.9m, partially recovering dwellings lost from height reduction."
+            "<br><br>"
+            "<strong>Planning benefits:</strong> Height override drops to 2.2&times; the GRZ2 9m limit "
+            "(within Clause 52.20 precedent range). Generous landscaping zone enables deep soil "
+            "planting, indigenous canopy trees per Yarra Nature Strategy, and verifiable on-site "
+            "canopy coverage (addressing current reliance on offsite council trees). Better "
+            "heritage interface with substantial buffer to contributory Victorian terraces."
+            "<br><br>"
+            "<strong>Key features:</strong> Vehicle access from Noone Street with improved geometry. "
+            "Parking under building (no external car park). Simpler vertical form without "
+            "street-facing step-backs. Substantial pervious surface area partially addressing "
+            "Clause 52.20-6.3 permeability shortfall. Subject to AS5100 railway clearance risk "
+            "assessment (building 15-16m from stabling siding centreline)."
+            "<br><br>"
+            "<strong>Estimated yield:</strong> Approximately 95-100 dwellings (vs 114 proposed), "
+            "maintaining a 3.2-3.3&times; multiplier over existing 30 units with superior planning outcomes."
+        ),
+    },
+    {
+        "id": "six-floors-tier2-maximum",
+        "label": "6 storeys (Tier 2, Mod 3 Option C)",
+        "height_reduction": 6.4,
+        "west_shift": 7.5,
+        "tower_east_setback": TOWER_EAST_SETBACK,
+        "include_street_masses": False,
+        "include_carpark": False,
+        "fence_east_offset": 4.0,
+        "description": (
+            "<strong>Height reduced to 6 storeys with maximum westward adjustment</strong> &mdash; "
+            "Building shifted 7.5m west (Modification 3 Option C), creating 8-12m Rutland Street "
+            "setback for a generous garden precinct. Tower widens from 21.9m to 29.4m, maximising "
+            "floor plate efficiency to recover dwellings."
+            "<br><br>"
+            "<strong>Planning benefits:</strong> Maximum landscaping and green space of all "
+            "scenarios. Deep setback enables substantial canopy tree planting, front gardens for "
+            "all ground-floor dwellings, and enhanced streetscape quality consistent with Clifton "
+            "Hill's garden suburb character. Height override at 2.2&times; the GRZ2 limit matches "
+            "strongest compliance position. Reduced afternoon overshadowing of heritage houses."
+            "<br><br>"
+            "<strong>Key features:</strong> Superior heritage interface with maximum buffer zone. "
+            "Substantial pervious surface area and verified on-site canopy coverage. Vehicle access "
+            "from Noone Street with optimal circulation geometry. Parking fully accommodated under "
+            "building. Simpler vertical massing. Subject to AS5100 railway clearance risk assessment "
+            "(building 12-14m from stabling siding centreline, deeper into 10-20m zone but still "
+            "well clear of 10m threshold)."
+            "<br><br>"
+            "<strong>Estimated yield:</strong> Approximately 95-105 dwellings (vs 114 proposed), "
+            "maintaining a 3.2-3.5&times; multiplier over existing 30 units. Represents optimal balance "
+            "between housing delivery and planning policy compliance with maximum amenity outcomes "
+            "for residents and streetscape."
         ),
     },
     {
@@ -337,10 +396,22 @@ BUILDINGS = [
         STREET_NORTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
         TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH,
         STREET_NORTH_WIDTH, STREET_NORTH_LENGTH, 9.675, "street", True),
+    ("Street-facing shaft infill",
+        STREET_SHAFT_INFILL_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
+        STREET_TRANSITION - ANCHOR_SOUTH_OF_LOT_NORTH,  # North edge aligns with northern mass south edge
+        SHAFT_EAST_SETBACK - STREET_SHAFT_INFILL_EAST_SETBACK,
+        (NORTH_SHAFT_SOUTH_OFFSET + NORTH_SHAFT_LENGTH) - STREET_TRANSITION,  # Extends to south edge of shaft notch
+        6.45, "street", True),
     ("Street-facing south",
         STREET_SOUTH_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
-        STREET_TRANSITION - ANCHOR_SOUTH_OF_LOT_NORTH,
+        STREET_SOUTH_NORTH_EDGE - ANCHOR_SOUTH_OF_LOT_NORTH,  # NE corner at north end of mass
         STREET_SOUTH_WIDTH, STREET_SOUTH_LENGTH, 6.45, "street", True),
+    ("Street-facing south shaft infill",
+        TOWER_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST,
+        SOUTH_SHAFT_SOUTH_OFFSET - ANCHOR_SOUTH_OF_LOT_NORTH,
+        SHAFT_EAST_SETBACK - TOWER_EAST_SETBACK,  # Notch depth
+        SOUTH_SHAFT_LENGTH,
+        6.45, "street", True),
     ("Roof south stairwell",      9.403, 47.91,   5.59,    3.67,  28.65, "roof", True),
     ("Roof HW heat pump",        14.75,  52.24,   7.66,    5.16,  28.4, "roof", True),
     ("Roof north stairwell",      8.858, 29.17,   5.0,     6.01,  27.5,  "roof", True),
