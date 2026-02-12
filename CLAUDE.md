@@ -58,10 +58,32 @@ Three overruns above the main tower roof (RL 48.23):
 - **Stair core north**: Full tower height (26.5m), bridges between podium and main tower
 - **Car park west**: Ground-level external overflow parking (0.11m height marker)
 
+## Scenarios
+
+The tool supports multiple building scenarios for comparison:
+
+| ID | Label | Tower Height | West Shift | Street Masses | Tower East Setback | Fence East |
+|----|-------|-------------|------------|---------------|-------------------|------------|
+| `proposal` | Proposal (8 storeys) | 26.5m | 0m | Yes | 10.548m | 0.5m |
+| `six-floors` | 6 storeys | 19.6m | 4.384m | Yes | 10.548m | 4.0m |
+| `six-floors-no-setback` | 6 storeys, wider footprint | 19.6m | 8.086m | No | 6.05m | 4.0m |
+| `six-floors-more-setback` | 6 storeys, larger setback | 19.6m | 8.086m | No | 10.548m | 4.0m |
+
+- **West Shift**: moves all masses except podium/fences westward
+  - Scenario 2: car park touches west lot boundary
+  - Scenarios 3 & 4: tower abuts west lot boundary; car park removed (parking under building)
+- **Street Masses**: the two lower street-facing step-backs between tower and Rutland St
+- **Tower East Setback**: distance from lot east boundary to tower east face (base value; effective position includes west shift for scenarios with uniform shift)
+- **Fence East**: street fence east edge distance from lot east boundary (0.5m original, 4.0m statutory)
+
 ## Files
-- `generate_geojson.py` - Python script to generate building model (generates both output files)
-- `index.geojson` - Output GeoJSON for shademap.app (generated, do not edit directly)
-- `index.html` - Interactive 3D viewer using Google Maps API (generated, do not edit directly)
+- `generate_geojson.py` - Python script to generate building models (generates all output files)
+- `proposal.geojson` - Original 8-storey proposal (generated, do not edit directly)
+- `six-floors.geojson` - 6 storeys scenario (generated, do not edit directly)
+- `six-floors-no-setback.geojson` - 6 storeys, wider footprint (generated, do not edit directly)
+- `six-floors-more-setback.geojson` - 6 storeys, larger setback (generated, do not edit directly)
+- `index.geojson` - Copy of proposal.geojson for backward compatibility (generated, do not edit directly)
+- `index.html` - Interactive 3D viewer with scenario switching (generated, do not edit directly)
 
 ## Dependencies
 - Python >=3.12

@@ -22,17 +22,17 @@ description = "Build and deploy to gh-pages"
 depends = ["uv-deps"]
 run = """
 python generate_geojson.py
-cp index.html /tmp/index.html.deploy
-cp index.geojson /tmp/index.geojson.deploy
+mkdir -p /tmp/rutland-deploy
+cp index.html /tmp/rutland-deploy/
+cp *.geojson /tmp/rutland-deploy/
 git stash --include-untracked
 git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
 git rm -rf . 2>/dev/null || true
-cp /tmp/index.html.deploy index.html
-cp /tmp/index.geojson.deploy index.geojson
-git add index.html index.geojson
+cp /tmp/rutland-deploy/* .
+git add index.html *.geojson
 git commit -m "Deploy" --allow-empty
 git push origin gh-pages --force
 git checkout main
 git stash pop 2>/dev/null || true
-rm -f /tmp/index.html.deploy /tmp/index.geojson.deploy
+rm -rf /tmp/rutland-deploy
 """
