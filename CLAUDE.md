@@ -62,18 +62,20 @@ Three overruns above the main tower roof (RL 48.23):
 
 The tool supports multiple building scenarios for comparison:
 
-| ID | Label | Tower Height | West Shift | Street Masses | Tower East Setback | Fence East |
-|----|-------|-------------|------------|---------------|-------------------|------------|
-| `proposal` | Proposal (8 storeys) | 26.5m | 0m | Yes | 10.548m | 0.5m |
-| `six-floors` | 6 storeys | 20.1m | 4.384m | Yes | 10.548m | 4.0m |
-| `six-floors-no-setback` | 6 storeys, wider footprint | 20.1m | 8.086m | No | 6.05m | 4.0m |
-| `six-floors-more-setback` | 6 storeys, larger setback | 20.1m | 8.086m | No | 10.548m | 4.0m |
+| ID | Label | Tower Height | West Shift | Street Masses | Tower East Setback | Tower South Setback | Fence East |
+|----|-------|-------------|------------|---------------|-------------------|---------------------|------------|
+| `proposal` | Proposal (8 storeys) | 26.5m | 0m | Yes | 10.548m | 0.492m | 0.5m |
+| `proposal-6m-south` | Proposal with 6m south setback | 26.5m | 0m | Yes | 10.548m | 6.0m | 0.5m |
+| `six-floors` | 6 storeys | 20.1m | 4.384m | Yes | 10.548m | 0.492m | 4.0m |
+| `six-floors-no-setback` | 6 storeys, wider footprint | 20.1m | 8.086m | No | 6.05m | 0.492m | 4.0m |
+| `six-floors-more-setback` | 6 storeys, larger setback | 20.1m | 8.086m | No | 10.548m | 0.492m | 4.0m |
 
 - **West Shift**: moves all masses except podium/fences westward
   - Scenario 2: car park touches west lot boundary
   - Scenarios 3 & 4: tower abuts west lot boundary; car park removed (parking under building)
 - **Street Masses**: the two lower street-facing step-backs between tower and Rutland St
 - **Tower East Setback**: distance from lot east boundary to tower east face (base value; effective position includes west shift for scenarios with uniform shift)
+- **Tower South Setback**: distance from lot south boundary to tower south face (affects tower length and street-facing south mass)
 - **Fence East**: street fence east edge distance from lot east boundary (0.5m original, 4.0m statutory)
 
 ## Files
@@ -83,6 +85,7 @@ The tool supports multiple building scenarios for comparison:
 - `generate_geojson.py` - **Source file** - Python script that generates all output files
 - `index.html` - Interactive 3D viewer with scenario switching (**GENERATED - edit generate_geojson.py instead**)
 - `proposal.geojson` - Original 8-storey proposal (generated)
+- `proposal-6m-south.geojson` - Original proposal with 6m south setback (generated)
 - `six-floors.geojson` - 6 storeys scenario (generated)
 - `six-floors-no-setback.geojson` - 6 storeys, wider footprint (generated)
 - `six-floors-more-setback.geojson` - 6 storeys, larger setback (generated)

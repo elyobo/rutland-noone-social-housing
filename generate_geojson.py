@@ -192,6 +192,29 @@ SCENARIOS = [
             "strongest planning policy compliance of all scenarios."
         ),
     },
+    {
+        "id": "proposal-6m-south",
+        "label": "Proposal with 6m south setback",
+        "height_reduction": 0.0,
+        "west_shift": 0.0,
+        "tower_east_setback": TOWER_EAST_SETBACK,
+        "include_street_masses": True,
+        "fence_east_offset": 0.5,
+        "tower_south_setback": 6.0,
+        "description": (
+            "<strong>Original proposal with 6m southern setback</strong> &mdash; "
+            "identical to the submitted proposal but with the building pulled back "
+            "6m from the southern lot boundary (vs 0.5m in the original)."
+            "<br><br>"
+            "<strong>Key changes:</strong> Tower length reduced from 65.7m to 60.2m "
+            "to accommodate the larger southern setback. Street-facing southern mass "
+            "shortened correspondingly. All other dimensions and positions unchanged."
+            "<br><br>"
+            "<strong>Estimated yield:</strong> Slightly reduced from the 114-dwelling "
+            "proposal due to shortened floor plate. Improved southern boundary clearance "
+            "for deep-soil planting and neighbour amenity."
+        ),
+    },
 ]
 
 # Coordinate transformers (WGS84 <-> UTM zone 55S for Melbourne)
@@ -224,15 +247,21 @@ def polygon(vertices):
     return Polygon(coords)
 
 
-def make_tower_vertices(tower_east_setback, west_shift=0):
+def make_tower_vertices(tower_east_setback, west_shift=0, tower_south_setback=None):
     """Compute main tower polygon vertices with shaft notches.
 
     Args:
         tower_east_setback: lot-relative east face position (metres from lot east boundary)
         west_shift: additional westward shift for west face and west notch only
+        tower_south_setback: optional override for south setback (metres from lot south boundary)
     Returns:
         list of anchor-relative (east_setback, south_offset) tuples
     """
+    if tower_south_setback is None:
+        tower_south_setback = TOWER_SOUTH_SETBACK
+
+    tower_length = LOT_LENGTH - TOWER_NORTH_SETBACK - tower_south_setback
+
     ne_east = tower_east_setback - ANCHOR_WEST_OF_LOT_EAST
     ne_south = TOWER_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH
 
@@ -257,8 +286,11 @@ def make_tower_vertices(tower_east_setback, west_shift=0):
     actual_width = tower_west - ne_east
     south_notch_east = ne_east + (actual_width - SOUTH_NOTCH_WIDTH) / 2
     south_notch_west = south_notch_east + SOUTH_NOTCH_WIDTH
-    south_notch_south = ne_south + TOWER_LENGTH
-    south_notch_north = LOT_LENGTH - SOUTH_NOTCH_NORTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH
+    south_notch_south = ne_south + tower_length
+    # Notch depth from tower south edge (constant depth from original design)
+    # Original: 5.09m from lot - 0.492m tower setback = 4.598m from tower edge
+    NOTCH_DEPTH_FROM_TOWER_EDGE = SOUTH_NOTCH_NORTH_SETBACK - TOWER_SOUTH_SETBACK
+    south_notch_north = south_notch_south - NOTCH_DEPTH_FROM_TOWER_EDGE
 
     return [
         (ne_east, ne_south),                               # NE corner
@@ -384,6 +416,11 @@ def generate_scenario(scenario):
     tower_east_setback = scenario["tower_east_setback"]
     include_street_masses = scenario["include_street_masses"]
     fence_east_offset = scenario["fence_east_offset"]
+    tower_south_setback = scenario.get("tower_south_setback", TOWER_SOUTH_SETBACK)
+
+    # Recalculate dependent dimensions if south setback changed
+    tower_length = LOT_LENGTH - TOWER_NORTH_SETBACK - tower_south_setback
+    street_south_length = (LOT_LENGTH - tower_south_setback) - STREET_TRANSITION
 
     east_face_shift = TOWER_EAST_SETBACK - tower_east_setback
 
@@ -423,7 +460,7 @@ def generate_scenario(scenario):
     sfence_width = sfence_west - sfence_east
 
     sfence_north = NORTH_SHAFT_SOUTH_OFFSET + NORTH_SHAFT_LENGTH - ANCHOR_SOUTH_OF_LOT_NORTH
-    sfence_south = LOT_LENGTH - TOWER_SOUTH_SETBACK - ANCHOR_SOUTH_OF_LOT_NORTH
+    sfence_south = LOT_LENGTH - tower_south_setback - ANCHOR_SOUTH_OF_LOT_NORTH
     sfence_span = sfence_south - sfence_north
 
     street_fence = [
@@ -446,6 +483,10 @@ def generate_scenario(scenario):
     for name, east, south, width, length, height, color_group, shade_relevant in all_boxes:
         is_east_face_item = name in ("Roof south stairwell", "Roof north stairwell")
 
+        # Override length for street-facing south mass if tower south setback changed
+        if name == "Street-facing south" and tower_south_setback != TOWER_SOUTH_SETBACK:
+            length = street_south_length
+
         # Apply positional shift (not to lot boundary, podium, or fences)
         if color_group not in ("lot", "fence") and name != "Northern podium" and "fence" not in name.lower():
             if is_east_face_item and east_face_shift != 0:
@@ -464,11 +505,11 @@ def generate_scenario(scenario):
     tower_height = TOWER_HEIGHT - height_reduction
     if east_face_shift == 0:
         # Scenarios with original east setback: compute base vertices, apply uniform shift
-        tower_verts = make_tower_vertices(TOWER_EAST_SETBACK)
+        tower_verts = make_tower_vertices(TOWER_EAST_SETBACK, tower_south_setback=tower_south_setback)
         tower_verts = [(e + west_shift, s) for e, s in tower_verts]
     else:
         # Different east setback: west_shift applied only to west face inside function
-        tower_verts = make_tower_vertices(tower_east_setback, west_shift=west_shift)
+        tower_verts = make_tower_vertices(tower_east_setback, west_shift=west_shift, tower_south_setback=tower_south_setback)
 
     poly = polygon(tower_verts)
     add_building(poly, "Main tower", tower_height, "tower", True)
