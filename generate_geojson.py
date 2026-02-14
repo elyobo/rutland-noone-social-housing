@@ -335,20 +335,20 @@ _nfence_east = PODIUM_EAST_SETBACK - ANCHOR_WEST_OF_LOT_EAST
 _nfence_width = PODIUM_WIDTH
 
 NORTH_FENCE = [
-    ("North fence brick S", _nfence_east, _nfence_south - BRICK_WIDTH,
-     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
-    ("North fence brick N", _nfence_east, _nfence_north,
-     _nfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
-    ("North fence picket", _nfence_east, _nfence_north + BRICK_WIDTH,
-     _nfence_width, _nfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence", False),
+    ("North fence brick E", _nfence_east, _nfence_north,
+     BRICK_WIDTH, _nfence_span, FENCE_HEIGHT, "podium", False),
+    ("North fence brick W", _nfence_east + _nfence_width - BRICK_WIDTH, _nfence_north,
+     BRICK_WIDTH, _nfence_span, FENCE_HEIGHT, "podium", False),
+    ("North fence picket", _nfence_east + BRICK_WIDTH, _nfence_north,
+     _nfence_width - 2 * BRICK_WIDTH, PICKET_THICKNESS, FENCE_HEIGHT, "fence", False),
 ]
 
-# Brick colours from architectural drawings
+# Colours from architectural material samples
 COLORS = {
-    "tower":   ("rgba(176, 128, 112, 1.0)", "rgba(140, 100, 88, 1.0)"),   # Lighter pinkish-red brick
-    "podium":  ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
-    "street":  ("rgba(140, 68, 68, 1.0)",   "rgba(100, 48, 48, 1.0)"),    # Deeper red-brown brick
-    "roof":    ("rgba(128, 128, 128, 1.0)", "rgba(96, 96, 96, 1.0)"),     # Grey
+    "tower":   ("rgba(210, 160, 140, 1.0)", "rgba(190, 140, 120, 1.0)"),  # Light salmon/peachy brick (main tower)
+    "podium":  ("rgba(180, 100, 80, 1.0)",  "rgba(160, 80, 60, 1.0)"),    # Red-orange brick (podium/street)
+    "street":  ("rgba(180, 100, 80, 1.0)",  "rgba(160, 80, 60, 1.0)"),    # Red-orange brick (podium/street)
+    "roof":    ("rgba(220, 210, 195, 1.0)", "rgba(200, 190, 175, 1.0)"),  # Light cream/beige (stair cores)
     "carpark": ("rgba(80, 80, 80, 1.0)",    "rgba(60, 60, 60, 1.0)"),     # Dark grey
     "lot":     ("rgba(0, 120, 255, 1.0)",   "rgba(0, 80, 200, 1.0)"),     # Bright blue
     "fence":   ("rgba(0, 0, 0, 0.7)",       "rgba(0, 0, 0, 0.9)"),        # Black picket fence
@@ -358,13 +358,13 @@ COLORS = {
 def build_legend(tower_height, include_street_masses, include_carpark=True):
     """Build legend HTML for a scenario."""
     items = [
-        f'<div class="legend-item"><span class="legend-swatch" style="background:rgb(176,128,112)"></span>Main tower ({tower_height}m)</div>',
+        f'<div class="legend-item"><span class="legend-swatch" style="background:rgb(210,160,140)"></span>Main tower ({tower_height}m)</div>',
     ]
     if include_street_masses:
-        items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(140,68,68)"></span>Podium (14.3m) / Street (9.675m, 6.45m)</div>')
+        items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(180,100,80)"></span>Podium (14.3m) / Street (9.675m, 6.45m)</div>')
     else:
-        items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(140,68,68)"></span>Podium (14.3m)</div>')
-    items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(128,128,128)"></span>Roof plant &amp; stairs</div>')
+        items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(180,100,80)"></span>Podium (14.3m)</div>')
+    items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(220,210,195)"></span>Roof plant &amp; stairs</div>')
     if include_carpark:
         items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(80,80,80)"></span>Car park (external overflow)</div>')
     items.append('<div class="legend-item"><span class="legend-swatch" style="background:rgb(0,120,255)"></span>Lot boundary</div>')
@@ -432,7 +432,7 @@ def generate_scenario(scenario):
         ("Street fence brick S", sfence_east, sfence_south - BRICK_WIDTH,
          sfence_width, BRICK_WIDTH, FENCE_HEIGHT, "podium", False),
         ("Street fence picket", sfence_east, sfence_north + BRICK_WIDTH,
-         sfence_width, sfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence", False),
+         PICKET_THICKNESS, sfence_span - 2 * BRICK_WIDTH, FENCE_HEIGHT, "fence", False),
     ]
 
     # Filter buildings per scenario config
@@ -541,6 +541,8 @@ def write_html(api_key, flat_map_id, all_scenarios):
     .info-panel h3 {{ margin: 0 0 8px; font-size: 15px; }}
     .info-panel p {{ margin: 0 0 8px; color: #666; font-size: 12px; line-height: 1.4; }}
     .info-panel a {{ color: #1a73e8; }}
+    .viewpoint-btn {{ padding: 6px; font-size: 11px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: white; }}
+    .viewpoint-btn:hover {{ background: #f8f8f8; }}
     /* Hide Google Maps alpha channel warning */
     [role="region"][aria-label*="alpha channel"] {{ display: none !important; }}
   </style>
@@ -566,6 +568,34 @@ def write_html(api_key, flat_map_id, all_scenarios):
         <div id="legend" class="legend">
         </div>
         <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
+        <div style="margin: 8px 0;">
+          <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 4px;">Viewpoints</label>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px;">
+            <button data-view="nw" class="viewpoint-btn">NW</button>
+            <button data-view="n" class="viewpoint-btn">N</button>
+            <button data-view="ne" class="viewpoint-btn">NE</button>
+            <button data-view="w" class="viewpoint-btn">W</button>
+            <button data-view="center" class="viewpoint-btn" style="background: #f0f0f0;">Centre</button>
+            <button data-view="e" class="viewpoint-btn">E</button>
+            <button data-view="sw" class="viewpoint-btn">SW</button>
+            <button data-view="s" class="viewpoint-btn">S</button>
+            <button data-view="se" class="viewpoint-btn">SE</button>
+          </div>
+          <div style="margin-top: 8px;">
+            <label style="font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 2px;">
+              <span>Elevation</span>
+              <span id="elevationValue">40m</span>
+            </label>
+            <input type="range" id="elevationSlider" min="1" max="90" value="40" style="width: 100%;">
+          </div>
+          <div style="margin-top: 8px;">
+            <label style="font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 2px;">
+              <span>Tilt</span>
+              <span id="tiltValue">81°</span>
+            </label>
+            <input type="range" id="tiltSlider" min="0" max="90" value="81" style="width: 100%;">
+          </div>
+        </div>
         <div class="view-mode">
           <label>View mode</label>
           <select id="viewMode">{view_options}
@@ -605,7 +635,11 @@ def write_html(api_key, flat_map_id, all_scenarios):
       // 3D map (full photorealistic) with Polygon3DElement
       const map3d = new Map3DElement({{
         center: {{ ...CENTER, altitude: 80 }},
-        range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID
+        range: 200, tilt: 60, heading: 0, mode: MapMode.HYBRID,
+        minAltitude: 0.1,
+        maxAltitude: 1000,
+        minTilt: 0,
+        maxTilt: 90
       }});
       map3d.style.width = map3d.style.height = "100%";
       document.getElementById("map3d").appendChild(map3d);
@@ -702,6 +736,115 @@ def write_html(api_key, flat_map_id, all_scenarios):
       // Occlusion toggle (3D mode only)
       occludedCheckbox.addEventListener("change", (e) => {{
         for (const p of polygons3d) p.drawsOccludedSegments = e.target.checked;
+      }});
+
+      // Viewpoint buttons - calculate positions around lot centrepoint
+      // Lot dimensions: 40.5m (E-W) × 80.9m (N-S)
+      // Anchor is 1.4m south of lot north boundary, 2.55m west of lot east boundary
+      // Lot centre from anchor: (2.55 - 20.25)m east, (1.4 - 40.45)m north = (-17.7, -39.05)m
+
+      // Helper: offset lat/lng by metres (north positive, east positive)
+      function offsetLatLng(lat, lng, northM, eastM) {{
+        const latOffset = northM / 111320; // metres per degree latitude
+        const lngOffset = eastM / (111320 * Math.cos(lat * Math.PI / 180)); // metres per degree longitude
+        return {{ lat: lat + latOffset, lng: lng + lngOffset }};
+      }}
+
+      // Calculate lot centrepoint (accounting for -5.8° rotation)
+      const rotRad = -5.8 * Math.PI / 180;
+      const eastOffset = -17.7, northOffset = -39.05; // from anchor in unrotated coords
+      const eastRot = eastOffset * Math.cos(rotRad) - northOffset * Math.sin(rotRad);
+      const northRot = eastOffset * Math.sin(rotRad) + northOffset * Math.cos(rotRad);
+      const lotCentre = offsetLatLng({ANCHOR_LAT}, {ANCHOR_LON}, northRot, eastRot);
+
+      // Viewpoint configuration
+      const viewDistance = 100;
+      const targetHeight = 25; // Height above ground to point at (metres)
+      const defaultElevation = 40; // Default camera elevation (metres)
+      let currentViewpoint = null;
+
+      const viewpoints = {{
+        n:      {{ heading: 180, offsetNorth: viewDistance, offsetEast: 0 }},
+        ne:     {{ heading: 225, offsetNorth: viewDistance/Math.sqrt(2), offsetEast: viewDistance/Math.sqrt(2) }},
+        e:      {{ heading: 270, offsetNorth: 0, offsetEast: viewDistance }},
+        se:     {{ heading: 315, offsetNorth: -viewDistance/Math.sqrt(2), offsetEast: viewDistance/Math.sqrt(2) }},
+        s:      {{ heading: 0, offsetNorth: -viewDistance, offsetEast: 0 }},
+        sw:     {{ heading: 45, offsetNorth: -viewDistance/Math.sqrt(2), offsetEast: -viewDistance/Math.sqrt(2) }},
+        w:      {{ heading: 90, offsetNorth: 0, offsetEast: -viewDistance }},
+        nw:     {{ heading: 135, offsetNorth: viewDistance/Math.sqrt(2), offsetEast: -viewDistance/Math.sqrt(2) }},
+        center: {{ heading: 0, offsetNorth: 0, offsetEast: 0, tilt: 60, range: 150, elevation: 80 }}
+      }};
+
+      const elevationSlider = document.getElementById("elevationSlider");
+      const tiltSlider = document.getElementById("tiltSlider");
+      const elevationValue = document.getElementById("elevationValue");
+      const tiltValue = document.getElementById("tiltValue");
+
+      // Calculate tilt to point at targetHeight above ground from given elevation and distance
+      // Tilt is angle from vertical: atan(horizontal_distance / vertical_difference)
+      function calculateTilt(elevation, distance, target) {{
+        const verticalDiff = elevation - target;
+        return Math.round(Math.atan(distance / verticalDiff) * 180 / Math.PI);
+      }}
+
+      // Update camera from current viewpoint and slider values
+      function updateCamera() {{
+        if (!currentViewpoint) return;
+        const view = viewpoints[currentViewpoint];
+        const elevation = parseInt(elevationSlider.value);
+        const tilt = parseInt(tiltSlider.value);
+        const viewPos = offsetLatLng(lotCentre.lat, lotCentre.lng, view.offsetNorth, view.offsetEast);
+
+        map3d.center = {{
+          lat: viewPos.lat,
+          lng: viewPos.lng,
+          altitude: GROUND + elevation
+        }};
+        map3d.heading = view.heading;
+        map3d.tilt = tilt;
+        map3d.range = view.range || viewDistance;
+      }}
+
+      // Viewpoint button clicks
+      document.querySelectorAll(".viewpoint-btn").forEach(btn => {{
+        btn.addEventListener("click", () => {{
+          currentViewpoint = btn.dataset.view;
+          const view = viewpoints[currentViewpoint];
+
+          // Set elevation slider (use view-specific elevation if available)
+          const elevation = view.elevation || defaultElevation;
+          elevationSlider.value = elevation;
+          elevationValue.textContent = elevation + "m";
+
+          // Calculate and set tilt (use view-specific tilt if available)
+          const tilt = view.tilt || calculateTilt(elevation, view.range || viewDistance, targetHeight);
+          tiltSlider.value = tilt;
+          tiltValue.textContent = tilt + "°";
+
+          updateCamera();
+        }});
+      }});
+
+      // Slider change events - update camera properties directly to retain current position
+      elevationSlider.addEventListener("input", () => {{
+        const elevation = parseInt(elevationSlider.value);
+        elevationValue.textContent = elevation + "m";
+
+        // Update only the altitude, keeping current lat/lng
+        const currentCenter = map3d.center;
+        map3d.center = {{
+          lat: currentCenter.lat,
+          lng: currentCenter.lng,
+          altitude: GROUND + elevation
+        }};
+      }});
+
+      tiltSlider.addEventListener("input", () => {{
+        const tilt = parseInt(tiltSlider.value);
+        tiltValue.textContent = tilt + "°";
+
+        // Update only the tilt
+        map3d.tilt = tilt;
       }});
     }}
 

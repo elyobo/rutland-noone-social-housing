@@ -77,13 +77,16 @@ The tool supports multiple building scenarios for comparison:
 - **Fence East**: street fence east edge distance from lot east boundary (0.5m original, 4.0m statutory)
 
 ## Files
-- `generate_geojson.py` - Python script to generate building models (generates all output files)
-- `proposal.geojson` - Original 8-storey proposal (generated, do not edit directly)
-- `six-floors.geojson` - 6 storeys scenario (generated, do not edit directly)
-- `six-floors-no-setback.geojson` - 6 storeys, wider footprint (generated, do not edit directly)
-- `six-floors-more-setback.geojson` - 6 storeys, larger setback (generated, do not edit directly)
-- `index.geojson` - Copy of proposal.geojson for backward compatibility (generated, do not edit directly)
-- `index.html` - Interactive 3D viewer with scenario switching (generated, do not edit directly)
+
+**IMPORTANT**: All files except `generate_geojson.py` are generated outputs. To modify the HTML viewer or building models, edit `generate_geojson.py` and run `mise build`. Do NOT edit generated files directly.
+
+- `generate_geojson.py` - **Source file** - Python script that generates all output files
+- `index.html` - Interactive 3D viewer with scenario switching (**GENERATED - edit generate_geojson.py instead**)
+- `proposal.geojson` - Original 8-storey proposal (generated)
+- `six-floors.geojson` - 6 storeys scenario (generated)
+- `six-floors-no-setback.geojson` - 6 storeys, wider footprint (generated)
+- `six-floors-more-setback.geojson` - 6 storeys, larger setback (generated)
+- `index.geojson` - Copy of proposal.geojson for backward compatibility (generated)
 
 ## Dependencies
 - Python >=3.12
