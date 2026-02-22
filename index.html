@@ -84,9 +84,9 @@
           <div style="margin-top: 8px;">
             <label style="font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 2px;">
               <span>Tilt</span>
-              <span id="tiltValue">81°</span>
+              <span id="tiltValue">68°</span>
             </label>
-            <input type="range" id="tiltSlider" min="0" max="90" value="81" style="width: 100%;">
+            <input type="range" id="tiltSlider" min="0" max="90" value="68" style="width: 100%;">
           </div>
         </div>
         <div class="view-mode">
@@ -226,6 +226,8 @@
         const is3d = e.target.value === "3d";
         document.getElementById("map3d").classList.toggle("hidden", !is3d);
         document.getElementById("mapFlat").classList.toggle("hidden", is3d);
+        // Sync camera to the current viewpoint whenever switching modes
+        if (currentViewpoint) updateCamera();
       });
 
       // Occlusion toggle (3D mode only)
@@ -254,7 +256,7 @@
 
       // Viewpoint configuration
       const viewDistance = 100;
-      const targetHeight = 25; // Height above ground to point at (metres)
+      const targetHeight = 0; // Ground level target — gives tilt ~68° at default elevation/distance, matching flat map max
       const defaultElevation = 40; // Default camera elevation (metres)
       let currentViewpoint = null;
 
@@ -295,10 +297,12 @@
         const viewPos = offsetLatLng(lotCentre.lat, lotCentre.lng, view.offsetNorth, view.offsetEast);
 
         if (isFlat() && mapFlat) {
-          mapFlat.setCenter(viewPos);
+          // Flat map: center is the look-at ground point, not the camera position
+          mapFlat.setCenter(lotCentre);
           mapFlat.setHeading(view.heading);
-          mapFlat.setTilt(Math.min(tilt, 45));
-          mapFlat.setZoom(20 - (elevation / 90) * 4);
+          mapFlat.setTilt(tilt);  // API caps at its own maximum (~67.5°)
+          // Logarithmic zoom: calibrated so elevation 40m → zoom 19 (building scale, Melbourne)
+          mapFlat.setZoom(19.25 - Math.log2(elevation / 40));
         } else {
           map3d.center = {
             lat: viewPos.lat,
@@ -337,8 +341,7 @@
         elevationValue.textContent = elevation + "m";
 
         if (isFlat() && mapFlat) {
-          // Map elevation (1-90m) to zoom (20 down to 16): higher elevation = zoomed out
-          mapFlat.setZoom(20 - (elevation / 90) * 4);
+          mapFlat.setZoom(19.25 - Math.log2(elevation / 40));
         } else {
           const currentCenter = map3d.center;
           map3d.center = {
@@ -354,7 +357,7 @@
         tiltValue.textContent = tilt + "°";
 
         if (isFlat() && mapFlat) {
-          mapFlat.setTilt(Math.min(tilt, 45));
+          mapFlat.setTilt(tilt);  // API caps at its own maximum (~67.5°)
         } else {
           map3d.tilt = tilt;
         }
