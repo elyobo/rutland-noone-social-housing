@@ -10,10 +10,9 @@
     .map-container.hidden { display: none; }
     gmp-map-3d { display: block; width: 100%; height: 100%; }
     .note { font-size: 11px; color: #888; margin-top: 8px; }
-    .legend { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+    .legend { margin-top: 0; padding-top: 0; }
     .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }
     .legend-swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-    .toggle { display: block; margin-top: 10px; font-size: 12px; cursor: pointer; }
     .view-mode { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
     .view-mode label { font-size: 12px; font-weight: 500; display: block; margin-bottom: 6px; }
     .view-mode select { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%; }
@@ -44,6 +43,8 @@
   <div id="info-panels">
     <div class="info-panel">
       <h3>Noone St / Rutland St Community Housing</h3>
+      <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
+      <!--
       <div class="scenario-mode">
         <label>Scenario</label>
         <select id="scenarioSelect">
@@ -54,13 +55,20 @@
         <option value="proposal-6m-south">Proposal with 6m south setback</option>
         </select>
       </div>
-      <details open>
-        <summary>Map controls</summary>
+      -->
+      <div id="legend" class="legend">
+      </div>
+      <div class="view-mode">
+        <label>View mode</label>
+        <select id="viewMode">
+        <option value="3d" selected>3D Surrounds</option>
+        <option value="flat">Flat Surrounds</option>
+        </select>
+      </div>
+      <details>
+        <summary>Extended options</summary>
         <p>Load <a id="geojsonLink" href="proposal.geojson" download>building model</a> into
            <a href="https://shademap.app" target="_blank">shademap.app</a> for shade analysis.</p>
-        <div id="legend" class="legend">
-        </div>
-        <p class="note">Shift+drag or Ctrl+drag to change viewing angle.</p>
         <div style="margin: 8px 0;">
           <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 4px;">Viewpoints</label>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px;">
@@ -89,22 +97,16 @@
             <input type="range" id="tiltSlider" min="0" max="90" value="68" style="width: 100%;">
           </div>
         </div>
-        <div class="view-mode">
-          <label>View mode</label>
-          <select id="viewMode">
-        <option value="3d" selected>3D Surrounds</option>
-        <option value="flat">Flat Surrounds</option>
-          </select>
-        </div>
-        <label class="toggle"><input type="checkbox" id="occluded"> Show through existing buildings</label>
       </details>
     </div>
+    <!--
     <div class="info-panel">
       <details open>
         <summary>Scenario details</summary>
         <div id="scenarioDesc" class="scenario-desc"></div>
       </details>
     </div>
+    -->
   </div>
   <script>
     const CENTER = { lat: -37.795009, lng: 144.995849 };
@@ -141,7 +143,6 @@
 
       let polygons3d = [];
       let overlay = null;
-      const occludedCheckbox = document.getElementById("occluded");
 
       // Flat map setup (only if Map ID configured)
       let mapFlat = null;
@@ -166,15 +167,13 @@
         polygons3d = [];
 
         // Create new 3D polygons
-        const drawsOccluded = occludedCheckbox.checked;
         for (const b of scenario.buildings) {
           const poly = new Polygon3DElement({
             altitudeMode: AltitudeMode.ABSOLUTE,
             extruded: true,
             fillColor: b.fill,
             strokeColor: b.stroke,
-            strokeWidth: 2,
-            drawsOccludedSegments: drawsOccluded
+            strokeWidth: 2
           });
           poly.outerCoordinates = b.coords.map(([lng, lat]) => ({
             lat, lng, altitude: GROUND + b.height
@@ -230,10 +229,6 @@
         if (currentViewpoint) updateCamera();
       });
 
-      // Occlusion toggle (3D mode only)
-      occludedCheckbox.addEventListener("change", (e) => {
-        for (const p of polygons3d) p.drawsOccludedSegments = e.target.checked;
-      });
 
       // Viewpoint buttons - calculate positions around lot centrepoint
       // Lot dimensions: 40.5m (E-W) × 80.9m (N-S)
@@ -302,7 +297,7 @@
           mapFlat.setHeading(view.heading);
           mapFlat.setTilt(tilt);  // API caps at its own maximum (~67.5°)
           // Logarithmic zoom: calibrated so elevation 40m → zoom 19 (building scale, Melbourne)
-          mapFlat.setZoom(19.25 - Math.log2(elevation / 40));
+          mapFlat.setZoom(19.50 - Math.log2(elevation / 40));
         } else {
           map3d.center = {
             lat: viewPos.lat,
@@ -341,7 +336,7 @@
         elevationValue.textContent = elevation + "m";
 
         if (isFlat() && mapFlat) {
-          mapFlat.setZoom(19.25 - Math.log2(elevation / 40));
+          mapFlat.setZoom(19.50 - Math.log2(elevation / 40));
         } else {
           const currentCenter = map3d.center;
           map3d.center = {
